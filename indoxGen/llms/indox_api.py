@@ -1,4 +1,5 @@
 import requests
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 def format_prompt(context, question):
