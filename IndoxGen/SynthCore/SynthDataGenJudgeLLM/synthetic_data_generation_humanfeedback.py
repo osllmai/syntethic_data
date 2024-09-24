@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import re
 
-class SyntheticDataGeneratorFeedback:
+
+class SyntheticDataGeneratorHF:
     def __init__(
             self,
             generator_llm: Any,
@@ -68,7 +69,7 @@ class SyntheticDataGeneratorFeedback:
         attempts = 0
         max_attempts = num_samples * 10
 
-        while len(self.generated_data) +len(self.pending_review) < num_samples and attempts < max_attempts:
+        while len(self.generated_data) + len(self.pending_review) < num_samples and attempts < max_attempts:
             attempts += 1
             generated = self._generate_single_data_point()
             if not generated:
@@ -196,7 +197,7 @@ class SyntheticDataGeneratorFeedback:
         prompt += "\nGenerate a single, unique data point as a JSON object. Be creative and ensure high diversity while staying realistic."
         for attempt in range(3):
             try:
-                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt, temperature=1.3)
+                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt)
                 # Find the first '{' and last '}' to extract the JSON object
                 start = generated.find('{')
                 end = generated.rfind('}')
@@ -231,7 +232,6 @@ class SyntheticDataGeneratorFeedback:
             print("Max attempts reached. Skipping this data point.")
         return {}
 
-
     def _generate_single_data_point(self) -> Dict[str, Any]:
         """
         Generate a single data point using the generator LLM.
@@ -245,7 +245,7 @@ class SyntheticDataGeneratorFeedback:
         max_attempts = 3
         for attempt in range(max_attempts):
             try:
-                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt, temperature=1.3)
+                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt)
                 json_start = generated.find('{')
                 json_end = generated.rfind('}') + 1
                 if json_start != -1 and json_end != -1:
@@ -404,7 +404,7 @@ class SyntheticDataGeneratorFeedback:
         prompt = (f"Data to evaluate: {json.dumps(data)}\n\nCriteria:\n{criteria}\n\nProvide a numeric score between 0 "
                   f"and 1.")
 
-        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt, temperature=0.2)
+        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt)
         try:
             return float(score_str)
         except ValueError:
@@ -453,4 +453,3 @@ class SyntheticDataGeneratorFeedback:
         criteria += ("Return a score between 0 and 1, where 1 is perfect. Only return the numeric score without any "
                      "additional text.")
         return criteria
-

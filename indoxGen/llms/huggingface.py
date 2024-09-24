@@ -1,4 +1,5 @@
 import requests
+<<<<<<< HEAD:llms/huggingface.py
 from loguru import logger
 import sys
 
@@ -19,6 +20,11 @@ class HuggingFaceModel:
     prompt_template: str = ""
 
     def __init__(self, api_key, model="mistralai/Mistral-7B-Instruct-v0.2", prompt_template=""):
+=======
+
+class HuggingFaceModel:
+    def __init__(self, api_key, model="", prompt_template=""):
+>>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
         """
         Initializes the specified model via the Hugging Face Inference API.
 
@@ -28,18 +34,19 @@ class HuggingFaceModel:
             prompt_template (str, optional): The template for the prompt. Defaults to None.
         """
         try:
+<<<<<<< HEAD:llms/huggingface.py
             logger.info(f"Initializing HuggingFaceModel with model: {model}")
+=======
+            self.api_key = api_key
+>>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
             self.model = model
             self.api_key = api_key
             self.prompt_template = prompt_template or "Context: {context}\nQuestion: {question}\nAnswer:"
             if not self.api_key:
                 raise ValueError("A valid Hugging Face API key is required.")
-            logger.info("HuggingFaceModel initialized successfully")
         except ValueError as ve:
-            logger.error(f"ValueError during initialization: {ve}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during initialization: {e}")
             raise
 
     def _send_request(self, prompt):
@@ -51,7 +58,6 @@ class HuggingFaceModel:
         }
 
         try:
-            logger.info("Sending request to Hugging Face API")
             response = requests.post(
                 f"https://api-inference.huggingface.co/models/{self.model}",
                 headers=headers,
@@ -59,7 +65,6 @@ class HuggingFaceModel:
             )
 
             if response.status_code == 200:
-                logger.info("Received successful response from Hugging Face API")
                 answer_data = response.json()
                 if isinstance(answer_data, list) and len(answer_data) > 0:
                     answer_data = answer_data[0]
@@ -67,10 +72,8 @@ class HuggingFaceModel:
                 return generated_text
             else:
                 error_message = f"Error from Hugging Face API: {response.status_code}, {response.text}"
-                logger.error(error_message)
                 raise Exception(error_message)
         except Exception as e:
-            logger.error(f"Error in _send_request: {e}")
             raise
 
     def chat(self, prompt, system_prompt=""):
@@ -79,9 +82,16 @@ class HuggingFaceModel:
         """
         combined_prompt = system_prompt + "\n" + prompt
         try:
+<<<<<<< HEAD:llms/huggingface.py
             logger.info(f"Sending prompt to HuggingFaceModel: {combined_prompt[:100]}...")  # Log a truncated prompt
             response = self._send_request(prompt=combined_prompt)
             return response.strip()
+=======
+            return self._send_request(system_prompt=system_prompt, user_prompt=prompt,
+                                      max_tokens=max_tokens, temperature=temperature,
+                                      top_p=top_p, frequency_penalty=frequency_penalty,
+                                      presence_penalty=presence_penalty)
+>>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
         except Exception as e:
             logger.error(f"Error in chat: {e}")
             raise
