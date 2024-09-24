@@ -98,8 +98,6 @@ class SyntheticDataGenerator:
                 f"Warning: Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
                 f" {attempts} attempts.")
 
-        self.diversity_threshold = 0.7
-
         return self._convert_to_dataframe()
 
     def _generate_single_data_point(self) -> Dict[str, Any]:

@@ -99,8 +99,6 @@ class SyntheticDataGeneratorHF:
                 f"Warning: Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
                 f" {attempts} attempts. Use 'user_review_and_regenerate' method for review and accept or regenerate rejected data with range score: {self.feedback_range} ")
 
-        self.diversity_threshold = 0.7
-
         return self._convert_to_dataframe()
 
     def user_review_and_regenerate(
