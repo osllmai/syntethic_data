@@ -1,17 +1,4 @@
 import requests
-<<<<<<< HEAD:llms/huggingface.py
-from loguru import logger
-import sys
-
-# Set up logging
-logger.remove()  # Remove the default logger
-logger.add(sys.stdout,
-           format="<green>{level}</green>: <level>{message}</level>",
-           level="INFO")
-
-logger.add(sys.stdout,
-           format="<red>{level}</red>: <level>{message}</level>",
-           level="ERROR")
 
 
 class HuggingFaceModel:
@@ -20,11 +7,6 @@ class HuggingFaceModel:
     prompt_template: str = ""
 
     def __init__(self, api_key, model="mistralai/Mistral-7B-Instruct-v0.2", prompt_template=""):
-=======
-
-class HuggingFaceModel:
-    def __init__(self, api_key, model="", prompt_template=""):
->>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
         """
         Initializes the specified model via the Hugging Face Inference API.
 
@@ -34,11 +16,6 @@ class HuggingFaceModel:
             prompt_template (str, optional): The template for the prompt. Defaults to None.
         """
         try:
-<<<<<<< HEAD:llms/huggingface.py
-            logger.info(f"Initializing HuggingFaceModel with model: {model}")
-=======
-            self.api_key = api_key
->>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
             self.model = model
             self.api_key = api_key
             self.prompt_template = prompt_template or "Context: {context}\nQuestion: {question}\nAnswer:"
@@ -82,16 +59,7 @@ class HuggingFaceModel:
         """
         combined_prompt = system_prompt + "\n" + prompt
         try:
-<<<<<<< HEAD:llms/huggingface.py
-            logger.info(f"Sending prompt to HuggingFaceModel: {combined_prompt[:100]}...")  # Log a truncated prompt
             response = self._send_request(prompt=combined_prompt)
             return response.strip()
-=======
-            return self._send_request(system_prompt=system_prompt, user_prompt=prompt,
-                                      max_tokens=max_tokens, temperature=temperature,
-                                      top_p=top_p, frequency_penalty=frequency_penalty,
-                                      presence_penalty=presence_penalty)
->>>>>>> 24d63bbe73e538f2fa1317b3a770801779266ec0:indoxGen/llms/huggingface.py
         except Exception as e:
-            logger.error(f"Error in chat: {e}")
             raise
