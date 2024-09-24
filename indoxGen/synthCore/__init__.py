@@ -1,6 +1,5 @@
-from .llm_synthetic_generation import SyntheticDataGenerator
-from .synthetic_data_generation_humanfeedback import SyntheticDataGeneratorFeedback
-
+from .llm_judge_synthetic_datagen.llm_and_llmJudge_synthetic_generation import SyntheticDataGenerator
+from .llm_judge_synthetic_datagen.synthetic_data_generation_humanfeedback import SyntheticDataGeneratorHF
 from .SynthDataGen import DataFromAttributedPrompt
 from .SynthDataGen import DataFromPrompt
 from .SynthDataGen import DataGenerationPrompt

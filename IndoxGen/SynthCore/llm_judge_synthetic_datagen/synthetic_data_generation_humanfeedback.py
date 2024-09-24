@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 import re
 
-class SyntheticDataGeneratorFeedback:
+
+class SyntheticDataGeneratorHF:
     def __init__(
             self,
             generator_llm: Any,
@@ -68,7 +69,7 @@ class SyntheticDataGeneratorFeedback:
         attempts = 0
         max_attempts = num_samples * 10
 
-        while len(self.generated_data) +len(self.pending_review) < num_samples and attempts < max_attempts:
+        while len(self.generated_data) + len(self.pending_review) < num_samples and attempts < max_attempts:
             attempts += 1
             generated = self._generate_single_data_point()
             if not generated:
@@ -230,7 +231,6 @@ class SyntheticDataGeneratorFeedback:
         if self.verbose >= 1:
             print("Max attempts reached. Skipping this data point.")
         return {}
-
 
     def _generate_single_data_point(self) -> Dict[str, Any]:
         """
@@ -453,4 +453,3 @@ class SyntheticDataGeneratorFeedback:
         criteria += ("Return a score between 0 and 1, where 1 is perfect. Only return the numeric score without any "
                      "additional text.")
         return criteria
-
