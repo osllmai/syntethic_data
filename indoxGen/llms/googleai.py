@@ -1,12 +1,5 @@
 import requests
 from tenacity import retry, stop_after_attempt, wait_random_exponential
-from loguru import logger
-import sys
-
-# Set up logging
-logger.remove()  # Remove the default logger
-logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
-logger.add(sys.stdout, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class GoogleAi:
@@ -67,7 +60,6 @@ class GoogleAi:
             response_json = response.json()
             return response_json.get("choices", [{}])[0].get("message", {}).get("content", "")
         else:
-            logger.error(f"Error from Google Gemini API: {response.status_code}, {response.text}")
             raise Exception(f"Google Gemini API request failed: {response.status_code}, {response.text}")
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))

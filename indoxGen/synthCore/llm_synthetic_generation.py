@@ -111,7 +111,7 @@ class SyntheticDataGenerator:
 
         for attempt in range(3):
             try:
-                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt, temperature=1.3)
+                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt)
                 # Find the first '{' and last '}' to extract the JSON object
                 start = generated.find('{')
                 end = generated.rfind('}')
@@ -247,7 +247,7 @@ class SyntheticDataGenerator:
         prompt = (f"Data to evaluate: {json.dumps(data)}\n\nCriteria:\n{criteria}\n\nProvide a numeric score between 0 "
                   f"and 1.")
 
-        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt, temperature=0.2)
+        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt)
         try:
             return float(score_str)
         except ValueError:
