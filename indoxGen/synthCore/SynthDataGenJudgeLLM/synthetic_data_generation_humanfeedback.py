@@ -1,11 +1,14 @@
 import json
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 import random
 from collections import defaultdict
 import numpy as np
 import pandas as pd
 import re
+import warnings
 
+warnings.filterwarnings(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 class SyntheticDataGeneratorHF:
     def __init__(
@@ -19,7 +22,7 @@ class SyntheticDataGeneratorHF:
             diversity_threshold: float = 0.7,
             max_diversity_failures: int = 20,
             verbose: int = 0,
-            feedback_range: Tuple[float, float] = (0.3, 0.6)
+            feedback_min_score: float =  0.6
     ):
         """
         Initialize the SyntheticDataGeneratorFeedback.
@@ -53,8 +56,8 @@ class SyntheticDataGeneratorHF:
         self.diversity_failure_count = 0
         self.verbose = verbose
         self.diversity_check_window = 5
-        self.pending_review = []
-        self.feedback_range = feedback_range
+        self.pending_review = pd.DataFrame(columns=['data', 'score'])
+        self.feedback_min_score = feedback_min_score
 
     def generate_data(self, num_samples: int) -> pd.DataFrame:
         """
@@ -77,19 +80,18 @@ class SyntheticDataGeneratorHF:
 
             score = self._judge_data_point(generated)
 
-            if score >= self.feedback_range[1] and self._is_diverse(generated):
+            if score >= self.feedback_min_score and self._is_diverse(generated):
                 self.generated_data.append(generated)
                 self.diversity_failure_count = 0
                 if self.verbose >= 1:
                     print(f"Generated data point: {generated}")
-            elif score >= self.feedback_range[1]:
-                self._handle_diversity_failure(generated)
-
-            elif self.feedback_range[0] < score < self.feedback_range[1] and self._is_diverse(generated):
-                self.pending_review.append(generated)
-
+            elif score >= self.feedback_min_score:
+                self._handle_diversity_failure(generated, score)
+            elif score < self.feedback_min_score and self._is_diverse(generated):
+                new_row = pd.DataFrame({'data': [generated], 'score': [score]})
+                self.pending_review = pd.concat([self.pending_review, new_row], ignore_index=True)
             else:
-                self._inform_generator(generated, score, "Low score")
+                self._handle_diversity_failure(generated, score)
 
             if self.verbose >= 1 and attempts % 10 == 0:
                 print(f"Progress: {len(self.generated_data)}/{num_samples} data points generated. Attempts: {attempts}")
@@ -97,105 +99,94 @@ class SyntheticDataGeneratorHF:
         if len(self.generated_data) < num_samples:
             print(
                 f"Warning: Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
-                f" {attempts} attempts. Use 'user_review_and_regenerate' method for review and accept or regenerate rejected data with range score: {self.feedback_range} ")
+                f" {attempts} attempts. Use 'user_review_and_regenerate' method for review and accept or regenerate rejected data")
 
         return self._convert_to_dataframe()
 
     def user_review_and_regenerate(
             self,
-            accepted_rows: List[int],
-            regenerate_rows: List[int],
+            accepted_rows: Union[List[int], List[str]],
+            regenerate_rows: Union[List[int], List[str]],
             regeneration_feedback: str,
-            min_score: float
+            min_score: float,
     ) -> pd.DataFrame:
         """
         Review and regenerate synthetic data based on feedback.
 
         Args:
-            accepted_rows (List[int]): Indices of rows to accept.
-            regenerate_rows (List[int]): Indices of rows to regenerate.
+            accepted_rows (List[int] or List[str]): Indices of rows to accept or ['all'].
+            regenerate_rows (List[int] or List[str]): Indices of rows to regenerate or ['all'].
             regeneration_feedback (str): Feedback for regeneration.
             min_score (float): Minimum score for accepting regenerated data.
 
         Returns:
             pd.DataFrame: DataFrame containing accepted and regenerated data.
         """
+        pending_review_copy = self.pending_review.copy()
 
-        accepted = []
-        to_regenerate = []
+        if accepted_rows == ['all'] and regenerate_rows == ['all']:
+            raise ValueError(
+                "Error: Both accepted_rows and regenerate_rows cannot be ['all']. Setting accepted_rows to ['all'] and ignoring regenerate_rows.")
+            accepted_rows = ['all']
+            regenerate_rows = []
+        elif accepted_rows == ['all']:
+            if regenerate_rows:
+                print("Warning: accepted_rows is set to ['all'], ignoring regenerate_rows.")
+            regenerate_rows = []
+        elif regenerate_rows == ['all']:
+            if accepted_rows:
+                print("Warning: regenerate_rows is set to ['all'], ignoring accepted_rows.")
+            accepted_rows = []
 
-        # If no rows are specified, accept all pending rows by default
-        if not accepted_rows and not regenerate_rows:
-            accepted_rows = list(range(len(self.pending_review)))
+        # Process accepted rows
+        if accepted_rows == ['all']:
+            self.generated_data.extend(pending_review_copy['data'].tolist())
+        elif accepted_rows:
+            accepted = pending_review_copy.iloc[accepted_rows]
+            self.generated_data.extend(accepted['data'].tolist())
 
-        for i in sorted(accepted_rows + regenerate_rows, reverse=True):
-            if i in accepted_rows:
-                accepted.append(self.pending_review[i])
-                self.pending_review.pop(i)
-            elif i in regenerate_rows:
-                to_regenerate.append(self.pending_review[i])
+        # Process rows to regenerate
+        if regenerate_rows == ['all']:
+            to_regenerate = pending_review_copy
+        elif regenerate_rows:
+            to_regenerate = pending_review_copy.iloc[regenerate_rows]
+        else:
+            to_regenerate = pd.DataFrame(columns=['data', 'score'])
 
-        self.generated_data.extend(accepted)
-
-        for data in to_regenerate:
-            regenerated = self._regenerate_data_point(data, regeneration_feedback)
-            print(regenerated)
+        # Regenerate data points
+        for _, row in to_regenerate.iterrows():
+            regenerated = self._generate_single_data_point(mode='regenerate', data=row['data'],
+                                                           feedback=regeneration_feedback)
             new_score = self._judge_data_point(regenerated)
 
             if new_score >= min_score and self._is_diverse(regenerated):
                 self.generated_data.append(regenerated)
-                # Only remove from pending_review if it's added to generated_data
-                self.pending_review = [d for d in self.pending_review if d != data]
             else:
                 print(f"Regenerated data point still has a low score ({new_score}). Keeping in pending review.")
+                new_row = pd.DataFrame({'data': [regenerated], 'score': [new_score]})
+                self.pending_review = pd.concat([self.pending_review, new_row], ignore_index=True)
+
+        if accepted_rows == ['all'] or regenerate_rows == ['all']:
+            self.pending_review = pd.DataFrame(columns=['data', 'score'])
+        elif accepted_rows or regenerate_rows:
+            rows_to_drop = list(set(accepted_rows).union(set(regenerate_rows)))
+            self.pending_review = self.pending_review.drop(rows_to_drop).reset_index(drop=False)
 
         return self._convert_to_dataframe()
 
-    def _regenerate_data_point(self, original_data: Dict[str, Any], feedback: str) -> Dict[str, Any]:
+    def _generate_single_data_point(self,mode = 'generate',data=None,feedback=None) -> Dict[str, Any]:
         """
-        Regenerate a single data point based on feedback.
-
-        Args:
-            original_data (Dict[str, Any]): Original data to regenerate.
-            feedback (str): Feedback for regeneration.
+        Generate a single data point using the generator LLM.
 
         Returns:
-            Dict[str, Any]: Regenerated data point.
+            Dict[str, Any]: A generated data point.
         """
+        system_prompt = "You are an advanced synthetic data generator. Create diverse and realistic data based on the given examples, criteria, and user instruction. Your response must be a valid JSON object."
+        prompt = self._create_generation_prompt(mode = mode, data = data, feedback = feedback)
 
-        system_prompt = "You are an advanced synthetic data generator. Regenerate the given data point based on the feedback provided."
-
-        # Start building the prompt
-        prompt = f"Original data: {json.dumps(original_data)}\n"
-        prompt += f"User feedback: {feedback}\n"
-        prompt += f"User instruction: {self.user_instruction}\n"
-        prompt += "Regenerate this data point, addressing the feedback while maintaining the overall structure and adhering to the original instructions.\n\n"
-
-        prompt += "Statistical information for numerical columns (use as a guide, not strict rules):\n"
-        for col, stats in self.column_stats.items():
-            if 'mean' in stats:
-                prompt += f"{col}: min={stats['min']}, max={stats['max']}, mean={stats['mean']:.2f}, std={stats['std']:.2f}\n"
-
-        prompt += "\nExample values for categorical columns:\n"
-        for col, stats in self.column_stats.items():
-            if 'unique_values' in stats:
-                prompt += f"{col}: {', '.join(list(stats['unique_values'])[:10])}\n"
-
-        shuffled_examples = random.sample(self.example_data + self.real_data,
-                                          min(5, len(self.example_data) + len(self.real_data)))
-        prompt += "\nExample data points:\n"
-        for example in shuffled_examples:
-            prompt += json.dumps(example) + "\n"
-
-        if self.generated_data:
-            prompt += "\nRecently generated data (generate something significantly different):\n"
-            for data in self.generated_data[-3:]:
-                prompt += json.dumps(data) + "\n"
-
-        prompt += "\nGenerate a single, unique data point as a JSON object. Be creative and ensure high diversity while staying realistic."
         for attempt in range(3):
             try:
-                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt)
+                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt, temperature=1.3)
                 # Find the first '{' and last '}' to extract the JSON object
                 start = generated.find('{')
                 end = generated.rfind('}')
@@ -230,42 +221,6 @@ class SyntheticDataGeneratorHF:
             print("Max attempts reached. Skipping this data point.")
         return {}
 
-    def _generate_single_data_point(self) -> Dict[str, Any]:
-        """
-        Generate a single data point using the generator LLM.
-
-        Returns:
-            Dict[str, Any]: A generated data point.
-        """
-        system_prompt = "You are an advanced synthetic data generator. Create diverse and realistic data based on the given examples, criteria, and user instruction. Your response must be a valid JSON object."
-        prompt = self._create_generation_prompt()
-
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                generated = self.generator_llm.chat(prompt, system_prompt=system_prompt)
-                json_start = generated.find('{')
-                json_end = generated.rfind('}') + 1
-                if json_start != -1 and json_end != -1:
-                    json_str = generated[json_start:json_end]
-                    data = json.loads(json_str)
-
-                    if all(col in data for col in self.columns):
-                        return data
-                    else:
-                        missing_columns = set(self.columns) - set(data.keys())
-                        print(f"Generated data is missing columns: {missing_columns}")
-                else:
-                    print("No valid JSON object found in the generated data")
-            except json.JSONDecodeError as e:
-                print(f"Failed to parse generated data (Attempt {attempt + 1}/{max_attempts}): {str(e)}")
-
-            if attempt < max_attempts - 1:
-                print(f"Retrying generation (Attempt {attempt + 2}/{max_attempts})...")
-
-        print("Max attempts reached. Skipping this data point.")
-        return {}
-
     def _calculate_column_stats(self) -> Dict[str, Dict[str, Any]]:
         """
         Calculate statistics for each column in the dataset.
@@ -292,7 +247,7 @@ class SyntheticDataGeneratorHF:
 
         return dict(stats)
 
-    def _create_generation_prompt(self) -> str:
+    def _create_generation_prompt(self,mode = 'generate' , data = None, feedback =None) -> str:
         """
         Create a prompt for generating synthetic data.
 
@@ -302,10 +257,16 @@ class SyntheticDataGeneratorHF:
         Returns:
             str: A formatted prompt string to be passed to the LLM for data generation.
         """
-        prompt = f"Generate diverse synthetic data with the following columns: {', '.join(self.columns)}.\n"
-        prompt += f"User instruction: {self.user_instruction}\n"
-        prompt += "Ensure that each generated data point is unique and significantly different from the previous ones.\n"
-        prompt += "The data should be realistic and inspired by the given examples, but with substantial variations.\n\n"
+        if mode == 'generate':
+            prompt = f"Generate diverse synthetic data with the following columns: {', '.join(self.columns)}.\n"
+            prompt += f"User instruction: {self.user_instruction}\n"
+            prompt += "Ensure that each generated data point is unique and significantly different from the previous ones.\n"
+            prompt += "The data should be realistic and inspired by the given examples, but with substantial variations.\n\n"
+        elif mode == 'regenerate':
+            prompt = f"Original data: {json.dumps(data)}\n"
+            prompt += f"User feedback: {feedback}\n"
+            prompt += f"User instruction: {self.user_instruction}\n"
+            prompt += "Regenerate this data point, addressing the feedback while maintaining the overall structure and adhering to the original instructions.\n\n"
 
         prompt += "Statistical information for numerical columns (use as a guide, not strict rules):\n"
         for col, stats in self.column_stats.items():
@@ -342,8 +303,8 @@ class SyntheticDataGeneratorHF:
             bool: Whether the data point is diverse.
         """
         from sklearn.metrics.pairwise import cosine_similarity
-
-        total_existing_data = self.generated_data + self.pending_review
+        pending_review = self.pending_review['data'].tolist()
+        total_existing_data = self.generated_data + pending_review
         if len(total_existing_data) < 2:
             return True
 
@@ -365,7 +326,7 @@ class SyntheticDataGeneratorHF:
         else:
             return False
 
-    def _handle_diversity_failure(self, generated: Dict[str, Any]) -> None:
+    def _handle_diversity_failure(self, generated: Dict[str, Any] , score :float) -> None:
         """
         Handle diversity failure when generating data.
 
@@ -378,8 +339,13 @@ class SyntheticDataGeneratorHF:
         if self.diversity_failure_count >= self.max_diversity_failures:
             if self.verbose >= 1:
                 print("Max diversity failures reached. Forcing acceptance of this data point.")
-            self.generated_data.append(generated)
-            self.diversity_failure_count = 0
+            if score >= self.feedback_min_score:
+                self.generated_data.append(generated)
+                self.diversity_failure_count = 0
+            else :
+                new_row = pd.DataFrame({'data': [generated], 'score': [score]})
+                self.pending_review = pd.concat([self.pending_review, new_row], ignore_index=True)
+
         elif self.diversity_failure_count % 5 == 0:
             # Every 5 failures, slightly increase the diversity threshold
             self.diversity_threshold += 0.05
@@ -402,7 +368,7 @@ class SyntheticDataGeneratorHF:
         prompt = (f"Data to evaluate: {json.dumps(data)}\n\nCriteria:\n{criteria}\n\nProvide a numeric score between 0 "
                   f"and 1.")
 
-        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt)
+        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt, temperature=0.2)
         try:
             return float(score_str)
         except ValueError:
@@ -451,3 +417,4 @@ class SyntheticDataGeneratorHF:
         criteria += ("Return a score between 0 and 1, where 1 is perfect. Only return the numeric score without any "
                      "additional text.")
         return criteria
+
