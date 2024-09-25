@@ -3,8 +3,8 @@
 
 
 [![License](https://img.shields.io/github/license/osllmai/indoxGen)](https://github.com/osllmai/indoxGen/blob/main/LICENSE)
-[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.01/)
-[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.01/)
+[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.2/)
+[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.2/)
 [![Downloads](https://static.pepy.tech/badge/indoxGen)](https://pepy.tech/project/indoxGen)
 
 [![Discord](https://img.shields.io/discord/1223867382460579961?label=Discord&logo=Discord&style=social)](https://discord.com/invite/ossllmai)
