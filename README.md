@@ -1,82 +1,214 @@
-# Synthetic Data Generator
-
+# IndoxGen: Enterprise-Grade Synthetic Data Generation Framework
 
 ## Overview
 
-The Synthetic Data Generator is an advanced tool designed to create realistic, diverse, and high-quality synthetic data for various applications. It leverages the power of Large Language Models (LLMs) to generate data that closely mimics real-world datasets while maintaining privacy and confidentiality.
+IndoxGen is a state-of-the-art, enterprise-ready framework designed for generating high-fidelity synthetic data. Leveraging advanced AI technologies, including Large Language Models (LLMs) and incorporating human feedback loops, IndoxGen offers unparalleled flexibility and precision in synthetic data creation across various domains and use cases.
 
-## Features
+## Key Features
 
-- **LLM-powered Generation**: Utilizes state-of-the-art language models to create diverse and realistic data points.
-- **Dual Generator Types**:
-  - **Judge-LLM Generator**: Employs an additional LLM to evaluate and ensure the quality of generated data.
-  - **Standard Generator**: A lightweight version without the LLM judge for faster generation.
-- **Customizable Output**: Generate data based on specific columns, example data, and user instructions.
-- **Diversity Control**: Implements sophisticated mechanisms to ensure variety in the generated dataset.
-- **Robust Error Handling**: Gracefully manages parsing errors and invalid outputs from LLMs.
+- **Multiple Generation Pipelines**:
+  - `SyntheticDataGenerator`: LLM-powered generation with quality assurance
+  - `SyntheticDataGeneratorHF`: Advanced pipeline integrating human feedback
+  - `DataFromPrompt`: Dynamic data generation based on natural language prompts
+- **Customization & Control**: Fine-grained control over data attributes, structure, and diversity
+- **Human-in-the-Loop**: Seamless integration of expert feedback for continuous improvement
+- **AI-Driven Diversity**: Sophisticated algorithms ensure representative and varied datasets
+- **Flexible I/O**: Support for various data sources and export formats, including Excel integration
+- **Advanced Learning Techniques**: Incorporation of few-shot learning for rapid adaptation
+- **Scalability**: Designed to handle both small-scale experiments and large-scale data generation tasks
 
 ## Installation
 
 ```bash
-pip install synthetic-data-generator
+pip install indoxgen
 ```
 
-## Quick Start
+## Quick Start Guide
+
+### Basic Usage: SyntheticDataGenerator
 
 ```python
-from SynthCore import SyntheticDataGenerator
+from indoxGen.synthCore import SyntheticDataGenerator
+from indoxGen.llms import OpenAi
 
-# Initialize the generator
+columns = ["name", "age", "occupation"]
+example_data = [
+    {"name": "Alice Johnson", "age": 35, "occupation": "Manager"},
+    {"name": "Bob Williams", "age": 42, "occupation": "Accountant"}
+]
+
+openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
+nemotron = OpenAi(api_key=NVIDIA_API_KEY, model="nvidia/nemotron-4-340b-instruct",
+                  base_url="https://integrate.api.nvidia.com/v1")
+
 generator = SyntheticDataGenerator(
-    generator_llm=your_generator_llm,
-    judge_llm=your_judge_llm,
-    columns=['col1', 'col2', 'col3'],
-    example_data=[{'col1': 'example1', 'col2': 'example2', 'col3': 'example3'}],
-    user_instruction="Generate diverse medical record data"
+    generator_llm=nemotron,
+    judge_llm=openai,
+    columns=columns,
+    example_data=example_data,
+    user_instruction="Generate diverse, realistic data including name, age, and occupation. Ensure variability in demographics and professions.",
+    verbose=1
 )
 
-# Generate data
 generated_data = generator.generate_data(num_samples=100)
-
-# Output to CSV
-generated_data.to_csv('synthetic_data.csv', index=False)
 ```
 
-## Configuration
+### Advanced Usage: SyntheticDataGeneratorHF with Human Feedback
 
-The `SyntheticDataGenerator` class accepts the following parameters:
+```python
+from indoxGen.synthCore import SyntheticDataGeneratorHF
+from indoxGen.llms import OpenAi
 
-- `generator_llm`: The language model used for generating data.
-- `judge_llm`: (Optional) The language model used for judging data quality.
-- `columns`: List of column names for the synthetic data.
-- `example_data`: List of example data points.
-- `user_instruction`: Instruction for data generation.
-- `real_data`: (Optional) List of real data points for reference.
-- `diversity_threshold`: Threshold for determining data diversity (default: 0.7).
-- `max_diversity_failures`: Maximum number of diversity failures before forcing acceptance (default: 20).
-- `verbose`: Verbosity level (0 for minimal output, 1 for detailed feedback).
+openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4-0613")
+nemotron = OpenAi(api_key=NVIDIA_API_KEY, model="nvidia/nemotron-4-340b-instruct",
+                  base_url="https://integrate.api.nvidia.com/v1")
 
-## Roadmap
+generator = SyntheticDataGeneratorHF(
+    generator_llm=nemotron,
+    judge_llm=openai,
+    columns=columns,
+    example_data=example_data,
+    user_instruction="Generate diverse, realistic professional profiles with name, age, and occupation.",
+    verbose=1,
+    diversity_threshold=0.4,
+    feedback_range=feedback_range
+)
 
-- [x] Implement basic synthetic data generation
-- [x] Add LLM-based judge for quality control
-- [x] Improve diversity checking mechanism
-- [ ] Integrate human feedback loop for continuous improvement
-- [ ] Develop a web-based UI for easier interaction
-- [ ] Support for more data types (images, time series, etc.)
-- [ ] Implement differential privacy techniques
-- [ ] Create plugin system for custom data generation rules
-- [ ] Develop comprehensive documentation and tutorials
+# Implement human feedback loop
+generator.user_review_and_regenerate(
+    regenerate_rows=[0],
+    accepted_rows=[],
+    regeneration_feedback='Diversify names and occupations further',
+    min_score=0.7
+)
+```
+
+### Prompt-Based Generation: DataFromPrompt
+
+```python
+from indoxGen.synthCore import DataFromPrompt, DataGenerationPrompt
+from indoxGen.llms import OpenAi
+
+nemotron = OpenAi(api_key=NVIDIA_API_KEY, model="nvidia/nemotron-4-340b-instruct",
+                  base_url="https://integrate.api.nvidia.com/v1")
+
+
+user_prompt = "Generate a comprehensive dataset with 3 columns and 3 rows about exoplanets."
+instruction = DataGenerationPrompt.get_instruction(user_prompt)
+
+data_generator = DataFromPrompt(
+    prompt_name="Exoplanet Dataset Generation",
+    args={
+        "llm": nemotron,
+        "n": 1,
+        "instruction": instruction,
+    },
+    outputs={"generations": "generate"},
+)
+
+generated_df = data_generator.run()
+data_generator.save_to_excel("exoplanet_data.xlsx")
+```
+
+## Advanced Techniques
+
+### Few-Shot Learning for Specialized Domains
+
+```python
+from indoxGen.synthCore import FewShotPrompt
+from indoxGen.llms import OpenAi
+
+openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
+
+examples = [
+    {
+        "input": "Generate a dataset with 3 columns and 2 rows about quantum computing.",
+        "output": '[{"Qubit Type": "Superconducting", "Coherence Time": "100 μs", "Gate Fidelity": "0.9999"}, {"Qubit Type": "Trapped Ion", "Coherence Time": "10 ms", "Gate Fidelity": "0.99999"}]'
+    },
+    {
+        "input": "Generate a dataset with 3 columns and 2 rows about nanotechnology.",
+        "output": '[{"Material": "Graphene", "Thickness": "1 nm", "Conductivity": "1.0e6 S/m"}, {"Material": "Carbon Nanotube", "Thickness": "1-2 nm", "Conductivity": "1.0e7 S/m"}]'
+    }
+]
+
+user_prompt = "Generate a dataset with 3 columns and 2 rows about advanced AI architectures."
+
+data_generator = FewShotPrompt(
+    prompt_name="Generate AI Architecture Dataset",
+    args={
+        "llm": openai,
+        "n": 1,  
+        "instruction": user_prompt,  
+    },
+    outputs={"generations": "generate"},
+    examples=examples  
+)
+
+generated_df = data_generator.run()
+data_generator.save_to_excel("ai_architectures.xlsx", generated_df)
+```
+
+### Attributed Prompts for Controlled Variation
+
+```python
+from indoxGen.synthCore import DataFromAttributedPrompt
+from indoxGen.llms import OpenAi
+
+openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
+
+args = {
+    "instruction": "Generate a {complexity} machine learning algorithm description that is {application_area} focused.",
+    "attributes": {
+        "complexity": ["basic", "advanced", "cutting-edge"],
+        "application_area": ["computer vision", "natural language processing", "reinforcement learning"]
+    },
+    "llm": openai
+}
+
+dataset = DataFromAttributedPrompt(
+    prompt_name="ML Algorithm Generator",
+    args=args,
+    outputs={}
+)
+
+df = dataset.run()
+print(df)
+```
+
+## Configuration and Customization
+
+Each generator class in IndoxGen is highly configurable to meet specific data generation requirements. Key parameters include:
+
+- `generator_llm` and `judge_llm`: Specify the LLMs used for generation and quality assessment
+- `columns` and `example_data`: Define the structure and provide examples for the generated data
+- `user_instruction`: Customize the generation process with specific guidelines
+- `diversity_threshold`: Control the level of variation in the generated data
+- `verbose`: Adjust the level of feedback during the generation process
+
+Refer to the API documentation for a comprehensive list of configuration options for each class.
+
+## Best Practices
+
+1. **Data Quality Assurance**: Regularly validate generated data against predefined quality metrics.
+2. **Iterative Refinement**: Utilize the human feedback loop to continuously improve generation quality.
+3. **Domain Expertise Integration**: Collaborate with domain experts to fine-tune generation parameters and validate outputs.
+4. **Ethical Considerations**: Ensure generated data adheres to privacy standards and ethical guidelines.
+5. **Performance Optimization**: Monitor and optimize generation pipeline for large-scale tasks.
 
 ## Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
+We welcome contributions from the community. Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to make contributions.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+IndoxGen is released under the MIT License. See [LICENSE.md](LICENSE.md) for more details.
 
-## Acknowledgments
+## Support and Documentation
 
-- Thanks to all contributors who have helped shape this project.
-- Special thanks to the open-source AI community for their invaluable resources and tools.
+For detailed API documentation, tutorials, and best practices, visit our [official documentation](https://indoxgen.readthedocs.io/).
+
+For support, please open an issue on our GitHub repository or contact our support team at support@indoxgen.com.
+
+---
+
+IndoxGen - Empowering Data-Driven Innovation with Advanced Synthetic Data Generation
