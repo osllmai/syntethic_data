@@ -3,8 +3,8 @@
 
 
 [![License](https://img.shields.io/github/license/osllmai/indoxGen)](https://github.com/osllmai/indoxGen/blob/main/LICENSE)
-[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.01/)
-[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.01/)
+[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.2/)
+[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.2/)
 [![Downloads](https://static.pepy.tech/badge/indoxGen)](https://pepy.tech/project/indoxGen)
 
 [![Discord](https://img.shields.io/discord/1223867382460579961?label=Discord&logo=Discord&style=social)](https://discord.com/invite/ossllmai)
@@ -239,11 +239,6 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file
 
 IndoxGen is released under the MIT License. See [LICENSE.md](LICENSE.md) for more details.
 
-## Support and Documentation
-
-For detailed API documentation, tutorials, and best practices, visit our [official documentation](https://indoxgen.readthedocs.io/).
-
-For support, please open an issue on our GitHub repository or contact our support team at support@indoxgen.com.
 
 ---
 
