@@ -239,11 +239,6 @@ We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file
 
 IndoxGen is released under the MIT License. See [LICENSE.md](LICENSE.md) for more details.
 
-## Support and Documentation
-
-For detailed API documentation, tutorials, and best practices, visit our [official documentation](https://indoxgen.readthedocs.io/).
-
-For support, please open an issue on our GitHub repository or contact our support team at support@indoxgen.com.
 
 ---
 
