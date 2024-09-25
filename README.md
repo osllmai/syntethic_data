@@ -8,7 +8,7 @@
 [![Downloads](https://static.pepy.tech/badge/indoxGen)](https://pepy.tech/project/indoxGen)
 
 [![Discord](https://img.shields.io/discord/1223867382460579961?label=Discord&logo=Discord&style=social)](https://discord.com/invite/ossllmai)
-[![GitHub stars](https://img.shields.io/github/stars/osllmai/inDox?style=social)](https://github.com/osllmai/inDox)
+[![GitHub stars](https://img.shields.io/github/stars/osllmai/indoxGen?style=social)](https://github.com/osllmai/indoxGen)
 
 <p align="center">
   <a href="https://osllm.ai">Official Website</a> &bull; <a href="https://docs.osllm.ai/index.html">Documentation</a> &bull; <a href="https://discord.gg/qrCc56ZR">Discord</a>
