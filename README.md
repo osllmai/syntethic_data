@@ -195,6 +195,22 @@ Refer to the API documentation for a comprehensive list of configuration options
 4. **Ethical Considerations**: Ensure generated data adheres to privacy standards and ethical guidelines.
 5. **Performance Optimization**: Monitor and optimize generation pipeline for large-scale tasks.
 
+## Roadmap
+
+[x] Implement basic synthetic data generation
+[x] Add LLM-based judge for quality control
+[x] Improve diversity checking mechanism
+[x] Integrate human feedback loop for continuous improvement
+[ ] Develop a web-based UI for easier interaction
+[ ] Support for more data types (images, time series, etc.)
+[ ] Implement differential privacy techniques
+[ ] Create plugin system for custom data generation rules
+[ ] Develop comprehensive documentation and tutorials
+## Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
+
+## License
 ## Contributing
 
 We welcome contributions from the community. Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to make contributions.
