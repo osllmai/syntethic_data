@@ -37,7 +37,7 @@ class SyntheticDataGeneratorHF:
             diversity_threshold (float): Threshold for determining data diversity.
             max_diversity_failures (int): Maximum number of diversity failures before forcing acceptance.
             verbose (int): Verbosity level (0 for minimal output, 1 for detailed feedback).
-            feedback_range (Tuple[float, float]): Score range for feedback.
+            feedback_min_score (float): Minimum score for accepting generated data
         """
         from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -269,27 +269,26 @@ class SyntheticDataGeneratorHF:
             prompt += "Regenerate this data point, addressing the feedback while maintaining the overall structure and adhering to the original instructions.\n\n"
 
         prompt += "Statistical information for numerical columns (use as a guide, not strict rules):\n"
-        for col, stats in self.column_stats.items():
-            if 'mean' in stats:
-                prompt += f"{col}: min={stats['min']}, max={stats['max']}, mean={stats['mean']:.2f}, std={stats['std']:.2f}\n"
+        prompt += "\n".join(
+            f"{col}: min={stats['min']}, max={stats['max']}, mean={stats['mean']:.2f}, std={stats['std']:.2f}"
+            for col, stats in self.column_stats.items() if 'mean' in stats)
 
-        prompt += "\nExample values for categorical columns:\n"
-        for col, stats in self.column_stats.items():
-            if 'unique_values' in stats:
-                prompt += f"{col}: {', '.join(list(stats['unique_values'])[:10])}\n"
+        prompt += "\n\nExample values for categorical columns:\n"
+        prompt += "\n".join(f"{col}: {', '.join(list(stats['unique_values'])[:10])}"
+                            for col, stats in self.column_stats.items() if 'unique_values' in stats)
 
         shuffled_examples = random.sample(self.example_data + self.real_data,
                                           min(5, len(self.example_data) + len(self.real_data)))
-        prompt += "\nExample data points:\n"
-        for example in shuffled_examples:
-            prompt += json.dumps(example) + "\n"
+        prompt += "\n\nExample data points:\n" + "\n".join(json.dumps(example) for example in shuffled_examples)
 
-        if self.generated_data:
-            prompt += "\nRecently generated data (generate something significantly different):\n"
-            for data in self.generated_data[-3:]:
-                prompt += json.dumps(data) + "\n"
+        pending_review = self.pending_review['data'].tolist()
+        total_existing_data = self.generated_data + pending_review
+        if total_existing_data:
+            prompt += "\n\nRecently generated data (generate something significantly different):\n"
+            prompt += "\n".join(json.dumps(data) for data in total_existing_data[-5:])
 
-        prompt += "\nGenerate a single, unique data point as a JSON object. Be creative and ensure high diversity while staying realistic."
+        prompt += ("\n\nGenerate a single, unique data point as a JSON object. Be creative and ensure high diversity "
+                   "while staying realistic.")
         return prompt
 
     def _is_diverse(self, new_data: Dict[str, Any]) -> bool:
@@ -368,7 +367,7 @@ class SyntheticDataGeneratorHF:
         prompt = (f"Data to evaluate: {json.dumps(data)}\n\nCriteria:\n{criteria}\n\nProvide a numeric score between 0 "
                   f"and 1.")
 
-        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt, temperature=0.2)
+        score_str = self.judge_llm.chat(prompt, system_prompt=system_prompt)
         try:
             return float(score_str)
         except ValueError:
