@@ -1,3 +1,4 @@
+
 # IndoxGen: Enterprise-Grade Synthetic Data Generation Framework
 
 ## Overview
@@ -7,15 +8,21 @@ IndoxGen is a state-of-the-art, enterprise-ready framework designed for generati
 ## Key Features
 
 - **Multiple Generation Pipelines**:
-  - `SyntheticDataGenerator`: LLM-powered generation with quality assurance
-  - `SyntheticDataGeneratorHF`: Advanced pipeline integrating human feedback
-  - `DataFromPrompt`: Dynamic data generation based on natural language prompts
-- **Customization & Control**: Fine-grained control over data attributes, structure, and diversity
-- **Human-in-the-Loop**: Seamless integration of expert feedback for continuous improvement
-- **AI-Driven Diversity**: Sophisticated algorithms ensure representative and varied datasets
-- **Flexible I/O**: Support for various data sources and export formats, including Excel integration
-- **Advanced Learning Techniques**: Incorporation of few-shot learning for rapid adaptation
-- **Scalability**: Designed to handle both small-scale experiments and large-scale data generation tasks
+  - `SyntheticDataGenerator`: Standard LLM-powered generation pipeline for structured data with embedded quality control mechanisms.
+  - `SyntheticDataGeneratorHF`: Advanced pipeline integrating human feedback to improve generation.
+  - `DataFromPrompt`: Dynamic data generation based on natural language prompts, useful for rapid prototyping.
+  
+- **Customization & Control**: Fine-grained control over data attributes, structure, and diversity. Customize every aspect of the synthetic data generation process.
+  
+- **Human-in-the-Loop**: Seamlessly integrates expert feedback for continuous improvement of generated data, offering the highest quality assurance.
+  
+- **AI-Driven Diversity**: Algorithms ensure representative and varied datasets, providing data diversity for robust modeling.
+  
+- **Flexible I/O**: Supports various data sources and export formats (Excel, CSV, etc.) for easy integration into existing workflows.
+  
+- **Advanced Learning Techniques**: Incorporation of few-shot learning for rapid adaptation to new domains with minimal examples.
+  
+- **Scalability**: Designed to handle both small-scale experiments and large-scale data generation tasks with multi-LLM support.
 
 ## Installation
 
@@ -196,24 +203,19 @@ Refer to the API documentation for a comprehensive list of configuration options
 5. **Performance Optimization**: Monitor and optimize generation pipeline for large-scale tasks.
 
 ## Roadmap
+* [x] Implement basic synthetic data generation
+* [x] Add LLM-based judge for quality control
+* [x] Improve diversity checking mechanism
+* [x] Integrate human feedback loop for continuous improvement
+* [ ] Develop a web-based UI for easier interaction
+* [ ] Support for more data types (images, time series, etc.)
+* [ ] Implement differential privacy techniques
+* [ ] Create plugin system for custom data generation rules
+* [ ] Develop comprehensive documentation and tutorials
 
-[x] Implement basic synthetic data generation
-[x] Add LLM-based judge for quality control
-[x] Improve diversity checking mechanism
-[x] Integrate human feedback loop for continuous improvement
-[ ] Develop a web-based UI for easier interaction
-[ ] Support for more data types (images, time series, etc.)
-[ ] Implement differential privacy techniques
-[ ] Create plugin system for custom data generation rules
-[ ] Develop comprehensive documentation and tutorials
 ## Contributing
 
 We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
-
-## License
-## Contributing
-
-We welcome contributions from the community. Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to make contributions.
 
 ## License
 
