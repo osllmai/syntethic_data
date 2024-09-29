@@ -10,6 +10,7 @@ import warnings
 warnings.filterwarnings(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
+
 class SyntheticDataGeneratorHF:
     def __init__(
             self,
@@ -22,7 +23,7 @@ class SyntheticDataGeneratorHF:
             diversity_threshold: float = 0.7,
             max_diversity_failures: int = 20,
             verbose: int = 0,
-            feedback_min_score: float =  0.6
+            feedback_min_score: float = 0.6
     ):
         """
         Initialize the SyntheticDataGeneratorFeedback.
@@ -174,7 +175,7 @@ class SyntheticDataGeneratorHF:
 
         return self._convert_to_dataframe()
 
-    def _generate_single_data_point(self,mode = 'generate',data=None,feedback=None) -> Dict[str, Any]:
+    def _generate_single_data_point(self, mode='generate', data=None, feedback=None) -> Dict[str, Any]:
         """
         Generate a single data point using the generator LLM.
 
@@ -182,7 +183,7 @@ class SyntheticDataGeneratorHF:
             Dict[str, Any]: A generated data point.
         """
         system_prompt = "You are an advanced synthetic data generator. Create diverse and realistic data based on the given examples, criteria, and user instruction. Your response must be a valid JSON object."
-        prompt = self._create_generation_prompt(mode = mode, data = data, feedback = feedback)
+        prompt = self._create_generation_prompt(mode=mode, data=data, feedback=feedback)
 
         for attempt in range(3):
             try:
@@ -247,7 +248,7 @@ class SyntheticDataGeneratorHF:
 
         return dict(stats)
 
-    def _create_generation_prompt(self,mode = 'generate' , data = None, feedback =None) -> str:
+    def _create_generation_prompt(self, mode='generate', data=None, feedback=None) -> str:
         """
         Create a prompt for generating synthetic data.
 
@@ -325,7 +326,7 @@ class SyntheticDataGeneratorHF:
         else:
             return False
 
-    def _handle_diversity_failure(self, generated: Dict[str, Any] , score :float) -> None:
+    def _handle_diversity_failure(self, generated: Dict[str, Any], score: float) -> None:
         """
         Handle diversity failure when generating data.
 
@@ -341,7 +342,7 @@ class SyntheticDataGeneratorHF:
             if score >= self.feedback_min_score:
                 self.generated_data.append(generated)
                 self.diversity_failure_count = 0
-            else :
+            else:
                 new_row = pd.DataFrame({'data': [generated], 'score': [score]})
                 self.pending_review = pd.concat([self.pending_review, new_row], ignore_index=True)
 
@@ -416,4 +417,3 @@ class SyntheticDataGeneratorHF:
         criteria += ("Return a score between 0 and 1, where 1 is perfect. Only return the numeric score without any "
                      "additional text.")
         return criteria
-
