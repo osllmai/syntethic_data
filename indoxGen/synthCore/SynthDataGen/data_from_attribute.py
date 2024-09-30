@@ -4,16 +4,11 @@ from loguru import logger
 import sys
 from itertools import product
 from typing import List, Dict, Any
-import time  # For tracking time durations
 
 # Set up logging
 logger.remove()  # Remove the default logger
-logger.add(sys.stdout,
-           format="<green>{level}</green>: <level>{message}</level>",
-           level="INFO")
-logger.add(sys.stdout,
-           format="<red>{level}</red>: <level>{message}</level>",
-           level="ERROR")
+logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
+logger.add(sys.stderr, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class DataFromAttributedPrompt:
@@ -47,11 +42,11 @@ class DataFromAttributedPrompt:
         self.max_tokens = max_tokens
         self.generated_data = []
 
-        # Log initialization
+        logger.info(
+            f"DataFromAttributedPrompt initialized with {len(attributes)} attributes and max_tokens={max_tokens}")
         if self.verbose >= 1:
-            logger.info("DataFromAttributedPrompt initialized.")
-        else:
-            logger.debug("DataFromAttributedPrompt initialized with minimal logging.")
+            logger.debug(f"Attributes: {attributes}")
+            logger.debug(f"User instruction: {user_instruction}")
 
     @staticmethod
     def get_instruction(user_prompt: str = "") -> str:
@@ -73,7 +68,9 @@ class DataFromAttributedPrompt:
             " Avoid using common phrases like 'Here is', 'Generated data', or any similar expressions."
             " Only return the structured data without any additional text or explanations."
         )
-        return f"{base_instruction} {user_prompt}".strip()
+        instruction = f"{base_instruction} {user_prompt}".strip()
+        logger.debug(f"Generated instruction: {instruction}")
+        return instruction
 
     def generate_data(self) -> pd.DataFrame:
         """
@@ -82,17 +79,14 @@ class DataFromAttributedPrompt:
         Returns:
             DataFrame containing the generated data.
         """
-        start_time = time.time()  # Start timing
+        logger.info("Starting data generation process")
         prompts = self._prepare_prompts()
         results = []
 
         for prompt in prompts:
-            if self.verbose >= 1:
-                logger.debug(f"Generating data for prompt: {prompt}")
-
+            logger.debug(f"Generating data for prompt: {prompt}")
             generated_data = self._generate_single_data_point(prompt)
             if generated_data:
-                # Extract only the 'sentence' or fall back to raw response
                 if isinstance(generated_data, dict) and 'sentence' in generated_data:
                     results.append(generated_data['sentence'])
                 else:
@@ -102,14 +96,8 @@ class DataFromAttributedPrompt:
             logger.error("No data generated.")
             return pd.DataFrame()
 
-        # Convert the list of sentences into a DataFrame
         df = pd.DataFrame(results, columns=["sentence"])
-
-        if self.verbose >= 1:
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            logger.info(f"Generated {len(df)} data points in {elapsed_time:.2f} seconds.")
-
+        logger.info(f"Generated {len(df)} data points")
         return df
 
     def _prepare_prompts(self) -> List[str]:
@@ -119,20 +107,16 @@ class DataFromAttributedPrompt:
         Returns:
             List of formatted prompts.
         """
-        start_time = time.time()  # Start timing
-
+        logger.info("Preparing prompts from attributes")
         attribute_combinations = product(*self.attributes.values())
         prompts = []
 
         for combination in attribute_combinations:
             attribute_dict = dict(zip(self.attributes.keys(), combination))
-            # Using the static method to get comprehensive instructions for generating data
             instruction = self.get_instruction(self.user_instruction.format(**attribute_dict))
             prompts.append(instruction)
 
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        logger.info(f"Generated {len(prompts)} prompts from attributes in {elapsed_time:.2f} seconds.")
+        logger.info(f"Generated {len(prompts)} prompts from attributes")
         return prompts
 
     def _generate_single_data_point(self, prompt: str) -> Any:
@@ -146,32 +130,25 @@ class DataFromAttributedPrompt:
             A string or sentence extracted from the generated response.
         """
         try:
+            logger.debug("Sending prompt to LLM")
             response = self.llm.chat(prompt=prompt, max_tokens=self.max_tokens)
             if isinstance(response, list):
                 response = ''.join(response)
 
-            # Try to load as JSON, fallback to raw response if JSON fails
             try:
                 result = json.loads(response)
-                if self.verbose >= 1:
-                    logger.debug(f"Successfully parsed JSON result: {result}")
-
-                # Extract meaningful data from any kind of structure (recursive if necessary)
+                logger.debug("Successfully parsed JSON result")
                 extracted_data = self._extract_data(result)
-
-                if self.verbose >= 1:
-                    logger.debug(f"Extracted data: {extracted_data}")
-
+                logger.debug(f"Extracted data: {extracted_data}")
                 return extracted_data
 
             except json.JSONDecodeError:
-                if self.verbose >= 1:
-                    logger.warning(f"Failed to parse JSON. Using raw response as fallback: {response}")
-                return response  # Use raw response as fallback
+                logger.warning(f"Failed to parse JSON. Using raw response as fallback: {response}")
+                return response
 
         except Exception as e:
             logger.error(f"Failed to generate data from LLM: {e}")
-            return prompt  # Fallback to the original prompt if LLM generation fails
+            return prompt
 
     def _extract_data(self, data: Any) -> str:
         """
@@ -183,23 +160,21 @@ class DataFromAttributedPrompt:
         Returns:
             A string with the extracted information.
         """
+        logger.debug(f"Extracting data from: {type(data)}")
         if isinstance(data, dict):
-            # Recursively handle dictionaries by picking the first string value found
             for key, value in data.items():
                 extracted_value = self._extract_data(value)
                 if extracted_value:
                     return extracted_value
 
         elif isinstance(data, list):
-            # Handle lists by recursively extracting the first meaningful value
             for item in data:
                 extracted_value = self._extract_data(item)
                 if extracted_value:
                     return extracted_value
 
         elif isinstance(data, str):
-            # Base case: return the string itself
             return data
 
-        # If no string found, return an empty string or other meaningful fallback
+        logger.warning("No meaningful data extracted")
         return ""

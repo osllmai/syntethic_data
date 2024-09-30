@@ -1,14 +1,21 @@
 import json
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Union
 import random
 from collections import defaultdict
 import numpy as np
 import pandas as pd
 import re
 import warnings
+from loguru import logger
+import sys
 
 warnings.filterwarnings(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+# Set up logging
+logger.remove()  # Remove the default logger
+logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
+logger.add(sys.stderr, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class SyntheticDataGeneratorHF:
@@ -26,7 +33,7 @@ class SyntheticDataGeneratorHF:
             feedback_min_score: float = 0.6
     ):
         """
-        Initialize the SyntheticDataGeneratorFeedback.
+        Initialize the SyntheticDataGeneratorHF.
 
         Args:
             generator_llm (Any): Language model for generating data.
@@ -85,7 +92,7 @@ class SyntheticDataGeneratorHF:
                 self.generated_data.append(generated)
                 self.diversity_failure_count = 0
                 if self.verbose >= 1:
-                    print(f"Generated data point: {generated}")
+                    logger.info(f"Generated data point: {generated}")
             elif score >= self.feedback_min_score:
                 self._handle_diversity_failure(generated, score)
             elif score < self.feedback_min_score and self._is_diverse(generated):
@@ -95,11 +102,12 @@ class SyntheticDataGeneratorHF:
                 self._handle_diversity_failure(generated, score)
 
             if self.verbose >= 1 and attempts % 10 == 0:
-                print(f"Progress: {len(self.generated_data)}/{num_samples} data points generated. Attempts: {attempts}")
+                logger.info(
+                    f"Progress: {len(self.generated_data)}/{num_samples} data points generated. Attempts: {attempts}")
 
         if len(self.generated_data) < num_samples:
-            print(
-                f"Warning: Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
+            logger.warning(
+                f"Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
                 f" {attempts} attempts. Use 'user_review_and_regenerate' method for review and accept or regenerate rejected data")
 
         return self._convert_to_dataframe()
@@ -126,17 +134,17 @@ class SyntheticDataGeneratorHF:
         pending_review_copy = self.pending_review.copy()
 
         if accepted_rows == ['all'] and regenerate_rows == ['all']:
-            raise ValueError(
-                "Error: Both accepted_rows and regenerate_rows cannot be ['all']. Setting accepted_rows to ['all'] and ignoring regenerate_rows.")
+            logger.error(
+                "Both accepted_rows and regenerate_rows cannot be ['all']. Setting accepted_rows to ['all'] and ignoring regenerate_rows.")
             accepted_rows = ['all']
             regenerate_rows = []
         elif accepted_rows == ['all']:
             if regenerate_rows:
-                print("Warning: accepted_rows is set to ['all'], ignoring regenerate_rows.")
+                logger.warning("accepted_rows is set to ['all'], ignoring regenerate_rows.")
             regenerate_rows = []
         elif regenerate_rows == ['all']:
             if accepted_rows:
-                print("Warning: regenerate_rows is set to ['all'], ignoring accepted_rows.")
+                logger.warning("regenerate_rows is set to ['all'], ignoring accepted_rows.")
             accepted_rows = []
 
         # Process accepted rows
@@ -163,7 +171,7 @@ class SyntheticDataGeneratorHF:
             if new_score >= min_score and self._is_diverse(regenerated):
                 self.generated_data.append(regenerated)
             else:
-                print(f"Regenerated data point still has a low score ({new_score}). Keeping in pending review.")
+                logger.info(f"Regenerated data point still has a low score ({new_score}). Keeping in pending review.")
                 new_row = pd.DataFrame({'data': [regenerated], 'score': [new_score]})
                 self.pending_review = pd.concat([self.pending_review, new_row], ignore_index=True)
 
@@ -206,20 +214,20 @@ class SyntheticDataGeneratorHF:
                     else:
                         missing_columns = set(self.columns) - set(data.keys())
                         if self.verbose >= 1:
-                            print(f"Generated data is missing columns: {missing_columns}")
+                            logger.warning(f"Generated data is missing columns: {missing_columns}")
                 else:
                     if self.verbose >= 1:
-                        print(f"Failed to find valid JSON object in generated text (Attempt {attempt + 1}/3)")
+                        logger.error(f"Failed to find valid JSON object in generated text (Attempt {attempt + 1}/3)")
             except json.JSONDecodeError as e:
                 if self.verbose >= 1:
-                    print(f"Failed to parse generated data (Attempt {attempt + 1}/3): {str(e)}")
-                    print(f"Problematic JSON string: {json_str}")
+                    logger.error(f"Failed to parse generated data (Attempt {attempt + 1}/3): {str(e)}")
+                    logger.error(f"Problematic JSON string: {json_str}")
 
             if self.verbose >= 1 and attempt < 2:
-                print(f"Retrying generation (Attempt {attempt + 2}/3)...")
+                logger.info(f"Retrying generation (Attempt {attempt + 2}/3)...")
 
         if self.verbose >= 1:
-            print("Max attempts reached. Skipping this data point.")
+            logger.warning("Max attempts reached. Skipping this data point.")
         return {}
 
     def _calculate_column_stats(self) -> Dict[str, Dict[str, Any]]:
@@ -332,13 +340,15 @@ class SyntheticDataGeneratorHF:
 
         Args:
             generated (Dict[str, Any]): Generated data point that failed the diversity check.
+            score (float): Quality score of the data point.
         """
         self.diversity_failure_count += 1
         if self.verbose >= 1:
-            print(f"Generated data is not diverse. Retrying... (Failure count: {self.diversity_failure_count})")
+            logger.warning(
+                f"Generated data is not diverse. Retrying... (Failure count: {self.diversity_failure_count})")
         if self.diversity_failure_count >= self.max_diversity_failures:
             if self.verbose >= 1:
-                print("Max diversity failures reached. Forcing acceptance of this data point.")
+                logger.info("Max diversity failures reached. Forcing acceptance of this data point.")
             if score >= self.feedback_min_score:
                 self.generated_data.append(generated)
                 self.diversity_failure_count = 0
@@ -350,7 +360,7 @@ class SyntheticDataGeneratorHF:
             # Every 5 failures, slightly increase the diversity threshold
             self.diversity_threshold += 0.05
             if self.verbose >= 1:
-                print(f"Increased diversity threshold to {self.diversity_threshold}")
+                logger.info(f"Increased diversity threshold to {self.diversity_threshold}")
 
     def _judge_data_point(self, data: Dict[str, Any]) -> float:
         """
@@ -373,7 +383,7 @@ class SyntheticDataGeneratorHF:
             return float(score_str)
         except ValueError:
             if self.verbose >= 1:
-                print(f"Failed to parse judge score: {score_str}")
+                logger.error(f"Failed to parse judge score: {score_str}")
             return 0.5
 
     def _inform_generator(self, data: Dict[str, Any], score: float, reason: str) -> None:
@@ -388,7 +398,7 @@ class SyntheticDataGeneratorHF:
         feedback = f"Generated data: {json.dumps(data)}\nScore: {score}\nReason: {reason}"
         self.feedback_history.append(feedback)
         if self.verbose >= 1:
-            print(f"Feedback for generator: {feedback}")
+            logger.info(f"Feedback for generator: {feedback}")
 
     def _convert_to_dataframe(self) -> pd.DataFrame:
         """

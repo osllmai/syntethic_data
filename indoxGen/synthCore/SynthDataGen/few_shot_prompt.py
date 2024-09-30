@@ -1,5 +1,4 @@
 import re
-
 import pandas as pd
 import json
 import warnings
@@ -7,16 +6,13 @@ from loguru import logger
 import sys
 from typing import List, Dict, Any
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # Set up logging
 logger.remove()  # Remove the default logger
-logger.add(sys.stdout,
-           format="<green>{level}</green>: <level>{message}</level>",
-           level="INFO")
-logger.add(sys.stdout,
-           format="<red>{level}</red>: <level>{message}</level>",
-           level="ERROR")
+logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
+logger.add(sys.stderr, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class FewShotPrompt:
@@ -47,6 +43,7 @@ class FewShotPrompt:
         self.examples = examples
         self.verbose = verbose
         self.max_tokens = max_tokens
+        logger.info(f"FewShotPrompt initialized with {len(examples)} examples and max_tokens={max_tokens}")
 
     def prepare_prompt(self) -> str:
         """
@@ -66,6 +63,7 @@ class FewShotPrompt:
         # Include the user instruction as the final input in the prompt
         full_prompt = f"{few_shot_examples}Input: {self.user_instruction}\nOutput:"
 
+        logger.debug(f"Prepared prompt with {len(self.examples)} examples")
         return full_prompt
 
     def generate_data(self) -> pd.DataFrame:
@@ -76,10 +74,12 @@ class FewShotPrompt:
             pd.DataFrame: A DataFrame containing the generated results.
         """
         full_prompt = self.prepare_prompt()
+        logger.info("Generating data from LLM")
 
         try:
             # Send the prompt to the LLM and receive the response
             generations = self.llm.chat(prompt=full_prompt, max_tokens=self.max_tokens)
+            logger.debug("Successfully received response from LLM")
         except Exception as e:
             logger.error(f"Failed to generate text from LLM: {e}")
             raise ValueError(f"Failed to generate text from LLM: {e}")
@@ -98,6 +98,7 @@ class FewShotPrompt:
         try:
             # Attempt to parse the cleaned LLM response as JSON
             results = json.loads(cleaned_response)
+            logger.info("Successfully parsed JSON response")
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON response: {e}. Attempting to extract JSON from markdown.")
             try:
@@ -105,6 +106,7 @@ class FewShotPrompt:
                 json_match = re.search(r'```json\s*([\s\S]*?)\s*```', cleaned_response)
                 if json_match:
                     results = json.loads(json_match.group(1))
+                    logger.info("Successfully extracted JSON from markdown")
                 else:
                     logger.error("No JSON found in markdown. Treating as plain text.")
                     results = [cleaned_response]
@@ -118,6 +120,7 @@ class FewShotPrompt:
         else:
             df = pd.DataFrame(results, columns=["output"])
 
+        logger.info(f"Created DataFrame with {len(df)} rows")
         return df
 
     def clean_llm_response(self, response: str) -> str:
@@ -130,6 +133,7 @@ class FewShotPrompt:
         Returns:
             str: The cleaned response.
         """
+        logger.debug("Cleaning LLM response")
         # Remove markdown code block syntax
         cleaned = re.sub(r'```json\s*|\s*```', '', response)
 
@@ -139,6 +143,7 @@ class FewShotPrompt:
         # Remove leading/trailing whitespace
         cleaned = cleaned.strip()
 
+        logger.debug("LLM response cleaned")
         return cleaned
 
     def save_to_excel(self, file_path: str, df: pd.DataFrame) -> None:

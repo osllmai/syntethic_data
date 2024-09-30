@@ -78,37 +78,6 @@ def __init__(self, prompt_name: str, args: dict, outputs: dict):
 ```
 Initializes the `DataFromAttributedPrompt` class.
 
-- `prompt_name` (str): The name of the prompt.
-- `args` (dict): Arguments containing the LLM, instructions, and attributes.
-- `outputs` (dict): Specifies how to handle the generated outputs.
-
-```python
-def register_input(self, name: str, help: str):
-```
-Registers an input for the generator.
-
-- `name` (str): The name of the input.
-- `help` (str): A description of the input.
-
-```python
-def register_output(self, name: str, help: str):
-```
-Registers an output for the generator.
-
-- `name` (str): The name of the output.
-- `help` (str): A description of the output.
-
-```python
-def prepare_prompts(self) -> List[str]:
-```
-Prepares multiple prompts based on the attributes.
-
-Returns: 
-- A list of formatted prompts generated from attribute combinations.
-
-```python
-def run(self) -> pd.DataFrame:
-```
 Generates synthetic data based on the attribute setup and returns it as a pandas DataFrame.
 
 Returns: 
@@ -126,34 +95,19 @@ Saves the generated DataFrame to an Excel file.
 
 ### Generating Data Based on Attributes
 ```python
-from indoxGen.synthCore import DataFromAttributedPrompt
-from indoxGen.llms import IndoxApi
-import os
+from indoxGen.synthCore import DataFromPrompt
+from indoxGen.utils import Excel
 
-# Load API key
-os.environ["INDOX_API_KEY"] = "your_api_key"
-LLM = IndoxApi(api_key=os.getenv("INDOX_API_KEY"))
+dataset_file_path = "output_dataFromPrompt.xlsx"
 
-# Define attributes
-args = {
-    "instruction": "Write a {tone} email about {topic}.",
-    "attributes": {
-        "tone": ["formal", "casual"],
-        "topic": ["meeting", "project update"]
-    },
-    "llm": LLM
-}
+excel_loader = Excel(dataset_file_path) 
+df = excel_loader.load()  
+user_prompt = " based on given dataset generate one unique row about soccer"
+LLM = IndoxApi(api_key=INDOX_API_KEY)
 
-# Create an instance of DataFromAttributedPrompt
-data_generator = DataFromAttributedPrompt(prompt_name="EmailPrompt",
-                                          args=args,
-                                          outputs={})
+added_row = DataFromPrompt(llm=LLM, user_instruction=user_prompt, example_data=df, verbose=1).generate_data()
+print(added_row)
 
-# Generate data
-df = data_generator.run()
-
-# Save to Excel
-data_generator.save_to_excel("generated_emails.xlsx", df)
 ```
 
 ## Contributing

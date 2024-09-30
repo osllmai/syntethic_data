@@ -7,10 +7,10 @@ from typing import Dict, Any, Optional
 
 warnings.filterwarnings("ignore")
 
-# Set up logging with different levels based on verbose flag
+# Set up logging
 logger.remove()  # Remove the default logger
 logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
-logger.add(sys.stdout, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
+logger.add(sys.stderr, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class DataFromPrompt:
@@ -43,16 +43,10 @@ class DataFromPrompt:
         self.verbose = verbose
         self.generated_data = None
 
-        # Adjust logger level based on verbosity
-        self._set_logging_level()
-
-    def _set_logging_level(self) -> None:
-        """Set the logging level based on verbosity."""
-        if self.verbose >= 1:
-            logger.enable(__name__)  # Enable detailed logging
-            logger.info("Verbose mode activated.")
-        else:
-            logger.disable(__name__)  # Disable logging except for errors
+        logger.info(f"DataFromPrompt initialized with verbose level {verbose}")
+        if example_data is not None:
+            logger.info(f"Example data provided with {len(example_data)} rows and {len(example_data.columns)} columns")
+        logger.debug(f"User instruction: {user_instruction}")
 
     @staticmethod
     def get_instruction(user_prompt: str = "") -> str:
@@ -74,7 +68,9 @@ class DataFromPrompt:
             " Avoid using common phrases like 'Here is', 'Generated data', or any similar expressions."
             " Only return the structured data without any additional text or explanations."
         )
-        return f"{base_instruction} {user_prompt}".strip()
+        instruction = f"{base_instruction} {user_prompt}".strip()
+        logger.debug(f"Generated instruction: {instruction}")
+        return instruction
 
     def generate_data(self) -> pd.DataFrame:
         """
@@ -83,13 +79,14 @@ class DataFromPrompt:
         Returns:
             pd.DataFrame: Generated data as a DataFrame.
         """
+        logger.info("Starting data generation process")
         generated = self._generate_data_point()
         if generated:
             self.generated_data = generated
-            if self.verbose >= 1:
-                logger.info(f"Generated data: {json.dumps(generated, indent=2)}")
+            logger.info("Data generated successfully")
+            logger.debug(f"Generated data: {json.dumps(generated, indent=2)}")
         else:
-            logger.warning("Failed to generate valid data.")
+            logger.warning("Failed to generate valid data")
 
         return self.to_dataframe()
 
@@ -99,10 +96,14 @@ class DataFromPrompt:
                          "the given instruction. Your response must be a valid JSON object with all property names "
                          "enclosed in double quotes.")
         prompt = self._create_generation_prompt()
+        logger.debug(f"Generation prompt: {prompt}")
 
         for attempt in range(3):
+            logger.info(f"Attempt {attempt + 1}/3 to generate data")
             try:
                 generated = self.llm.chat(prompt=prompt, system_prompt=system_prompt, max_tokens=8000)
+                logger.debug(f"Raw generated text: {generated}")
+
                 # Extract the JSON object
                 start = generated.find('{')
                 end = generated.rfind('}')
@@ -110,6 +111,7 @@ class DataFromPrompt:
                     json_str = generated[start:end + 1]
                     json_str = json_str.replace("'", '"')  # Ensure valid JSON format
                     data = json.loads(json_str)
+                    logger.info("Successfully extracted and parsed JSON data")
                     return data
                 else:
                     logger.warning(f"Failed to find valid JSON object in generated text (Attempt {attempt + 1}/3)")
@@ -119,7 +121,7 @@ class DataFromPrompt:
             if attempt < 2:
                 logger.info(f"Retrying generation (Attempt {attempt + 2}/3)...")
 
-        logger.warning("Max attempts reached. Failed to generate valid data.")
+        logger.error("Max attempts reached. Failed to generate valid data.")
         return {}
 
     def _create_generation_prompt(self) -> str:
@@ -129,18 +131,17 @@ class DataFromPrompt:
                    "The response should be detailed, relevant, and in a format that can be parsed as a JSON object.\n")
 
         if self.dataframe is not None:
-            # Get the columns from the DataFrame
             columns = self.dataframe.columns.tolist()
             sample_row = self.dataframe.to_dict(orient='records')
-
-            # Add context with sample data
             prompt += f"\nContext (existing data sample): {json.dumps(sample_row)}\n"
             prompt += f"Only use the following columns for your response: {', '.join(columns)}.\n"
+            logger.debug(f"Added context to prompt with {len(columns)} columns")
 
         prompt += (
             "\nGenerate a single, comprehensive response as a JSON object. Make sure the response contains "
             "only the specified columns and do not add any extra fields. The response should be directly relevant to the user instruction."
         )
+        logger.debug("Generation prompt created")
         return prompt
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -149,24 +150,28 @@ class DataFromPrompt:
             logger.error("No data has been generated yet. Call generate_data() first.")
             return pd.DataFrame()
 
-        # If the generated data is a list of dictionaries, directly convert to a DataFrame
+        logger.info("Converting generated data to DataFrame")
+
         if isinstance(self.generated_data, list):
             if all(isinstance(item, dict) for item in self.generated_data):
-                return pd.DataFrame(self.generated_data)
+                df = pd.DataFrame(self.generated_data)
+                logger.info(f"Created DataFrame from list of dictionaries: {df.shape}")
+                return df
 
-        # If the generated data is a dictionary, handle possible nested structures
         elif isinstance(self.generated_data, dict):
-            # Flatten if the dictionary contains nested lists or dictionaries
             for key, value in self.generated_data.items():
                 if isinstance(value, list) and all(isinstance(item, dict) for item in value):
-                    # Convert list of dictionaries into a DataFrame
-                    return pd.DataFrame(value)
+                    df = pd.DataFrame(value)
+                    logger.info(f"Created DataFrame from nested list of dictionaries: {df.shape}")
+                    return df
                 elif isinstance(value, dict):
-                    # Convert the inner dictionary into a DataFrame with one row
-                    return pd.DataFrame([value])
+                    df = pd.DataFrame([value])
+                    logger.info(f"Created DataFrame from nested dictionary: {df.shape}")
+                    return df
 
-            # If it's a simple dictionary, convert it into a single-row DataFrame
-            return pd.DataFrame([self.generated_data])
+            df = pd.DataFrame([self.generated_data])
+            logger.info(f"Created DataFrame from single dictionary: {df.shape}")
+            return df
 
         logger.error(f"Unexpected data type: {type(self.generated_data)}. Cannot convert to DataFrame.")
         return pd.DataFrame()
