@@ -43,41 +43,35 @@ Here's a basic example of how to use **FewShotPrompt**:
 
 ```python
 from indoxGen.synthCore import FewShotPrompt
-from indoxGen.llms import IndoxApi
+# Define your Language Model (LLM) instance (replace with the actual LLM you're using)
+LLM = IndoxApi(api_key=INDOX_API_KEY)
 
-# Setup language model
-llm = IndoxApi(api_key=INDOX_API_KEY)
+# Define a user prompt for the generation task
+user_prompt = "Describe the formation of stars in simple terms. Return the result in JSON format, with the key 'description'."
 
-# Few-shot examples
+# Define few-shot examples (input-output pairs) to help guide the LLM
 examples = [
     {
-        "input": "Generate a dataset with 3 columns and 2 rows about biology.",
-        "output": '[{"Species": "Human", "Cell Count": 37.2, "Age": 30}, {"Species": "Mouse", "Cell Count": 3.2, "Age": 2}]'
+        "input": "Describe the process of photosynthesis.",
+        "output": "Photosynthesis is the process by which green plants use sunlight to synthesize food from carbon dioxide and water."
     },
     {
-        "input": "Generate a dataset with 3 columns and 2 rows about chemistry.",
-        "output": '[{"Element": "Hydrogen", "Atomic Number": 1, "Weight": 1.008}, {"Element": "Oxygen", "Atomic Number": 8, "Weight": 15.999}]'
+        "input": "Explain the water cycle.",
+        "output": "The water cycle is the process by which water circulates between the earth's oceans, atmosphere, and land, involving precipitation, evaporation, and condensation."
     }
 ]
 
-user_prompt = "Generate a dataset with 3 columns and 2 rows about astronomy."
-
-# Create FewShotPrompt instance
+# Create an instance of FewShotPrompt using the defined LLM, user prompt, and few-shot examples
 data_generator = FewShotPrompt(
-    prompt_name="Generate Astronomy Dataset",
-    args={
-        "llm": llm,
-        "n": 1,
-        "instruction": user_prompt,
-    },
-    outputs={"generations": "generate"},
-    examples=examples
+    llm=LLM,                            # Language model instance (LLM)
+    user_instruction=user_prompt,        # Main user instruction or query
+    examples=examples,                   # Few-shot input-output examples
+    verbose=1,                           # Verbosity level (optional)
+    max_tokens=8000                      # Max tokens for generation (optional)
 )
 
-# Generate and save the dataset
-generated_df = data_generator.run()
-print(generated_df)
-data_generator.save_to_excel("output_data.xlsx", generated_df)
+# Generate the data based on the few-shot setup
+df = data_generator.generate_data()
 ```
 
 ## API Reference
@@ -89,30 +83,6 @@ def __init__(self, prompt_name: str, args: dict, outputs: dict, examples: List[D
 ```
 Initializes the **FewShotPrompt** class.
 
-- `prompt_name` (str): The name of the prompt.
-- `args` (dict): Arguments containing the LLM and instructions.
-- `outputs` (dict): Specifies how to handle the generated outputs.
-- `examples` (List[Dict[str, str]]): A list of few-shot examples (input-output pairs).
-
----
-
-```python
-def prepare_prompt(self) -> str:
-```
-Prepares the full prompt by including the examples and user instructions.
-
-- Returns: A string representing the prompt to be sent to the LLM.
-
----
-
-```python
-def run(self) -> pd.DataFrame:
-```
-Generates synthetic data based on the few-shot setup and returns it as a pandas DataFrame.
-
-- Returns: A pandas DataFrame containing the generated data.
-
----
 
 ```python
 def save_to_excel(self, file_path: str, df: pd.DataFrame) -> None:
@@ -123,47 +93,6 @@ Saves the generated DataFrame to an Excel file.
 - `df` (pd.DataFrame): The DataFrame to be saved.
 - Raises: `ValueError` if the DataFrame is empty or cannot be saved.
 
-## Examples
-
-### Generating Astronomy Dataset
-```python
-from indoxGen.synthCore import FewShotPrompt
-from indoxGen.llms import IndoxApi
-
-# Setup language model
-llm = IndoxApi(api_key=INDOX_API_KEY)
-
-# Few-shot examples
-examples = [
-    {
-        "input": "Generate a dataset with 3 columns and 2 rows about biology.",
-        "output": '[{"Species": "Human", "Cell Count": 37.2, "Age": 30}, {"Species": "Mouse", "Cell Count": 3.2, "Age": 2}]'
-    },
-    {
-        "input": "Generate a dataset with 3 columns and 2 rows about chemistry.",
-        "output": '[{"Element": "Hydrogen", "Atomic Number": 1, "Weight": 1.008}, {"Element": "Oxygen", "Atomic Number": 8, "Weight": 15.999}]'
-    }
-]
-
-user_prompt = "Generate a dataset with 3 columns and 2 rows about astronomy."
-
-# Create FewShotPrompt instance
-data_generator = FewShotPrompt(
-    prompt_name="Generate Astronomy Dataset",
-    args={
-        "llm": llm,
-        "n": 1,
-        "instruction": user_prompt,
-    },
-    outputs={"generations": "generate"},
-    examples=examples
-)
-
-# Generate and save the dataset
-generated_df = data_generator.run()
-print(generated_df)
-data_generator.save_to_excel("output_data.xlsx", generated_df)
-```
 
 ## Contributing
 Contributions to improve **FewShotPrompt** are welcome. Please follow these steps:

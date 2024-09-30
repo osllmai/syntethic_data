@@ -7,6 +7,13 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
+from loguru import logger
+import sys
+
+# Set up logging
+logger.remove()  # Remove the default logger
+logger.add(sys.stdout, format="<green>{level}</green>: <level>{message}</level>", level="INFO")
+logger.add(sys.stdout, format="<red>{level}</red>: <level>{message}</level>", level="ERROR")
 
 
 class SyntheticDataGenerator:
@@ -84,19 +91,19 @@ class SyntheticDataGenerator:
                 self.generated_data.append(generated)
                 self.diversity_failure_count = 0
                 if self.verbose >= 1:
-                    print(f"Generated data point: {generated}")
+                    logger.info(f"Generated data point: {generated}")
             elif score >= 0.6:
                 self._handle_diversity_failure(generated)
             else:
                 self._inform_generator(generated, score, "Low score")
 
             if self.verbose >= 1 and attempts % 10 == 0:
-                print(f"Progress: {len(self.generated_data)}/{num_samples} data points generated. Attempts: {attempts}")
+                logger.info(
+                    f"Progress: {len(self.generated_data)}/{num_samples} data points generated. Attempts: {attempts}")
 
         if len(self.generated_data) < num_samples:
-            print(
-                f"Warning: Only generated {len(self.generated_data)} out of {num_samples} requested samples after"
-                f" {attempts} attempts.")
+            logger.warning(
+                f"Only generated {len(self.generated_data)} out of {num_samples} requested samples after {attempts} attempts.")
 
         return self._convert_to_dataframe()
 
@@ -128,20 +135,20 @@ class SyntheticDataGenerator:
                     else:
                         missing_columns = set(self.columns) - set(data.keys())
                         if self.verbose >= 1:
-                            print(f"Generated data is missing columns: {missing_columns}")
+                            logger.warning(f"Generated data is missing columns: {missing_columns}")
                 else:
                     if self.verbose >= 1:
-                        print(f"Failed to find valid JSON object in generated text (Attempt {attempt + 1}/3)")
+                        logger.error(f"Failed to find valid JSON object in generated text (Attempt {attempt + 1}/3)")
             except json.JSONDecodeError as e:
                 if self.verbose >= 1:
-                    print(f"Failed to parse generated data (Attempt {attempt + 1}/3): {str(e)}")
-                    print(f"Problematic JSON string: {json_str}")
+                    logger.error(f"Failed to parse generated data (Attempt {attempt + 1}/3): {str(e)}")
+                    logger.error(f"Problematic JSON string: {json_str}")
 
             if self.verbose >= 1 and attempt < 2:
-                print(f"Retrying generation (Attempt {attempt + 2}/3)...")
+                logger.info(f"Retrying generation (Attempt {attempt + 2}/3)...")
 
         if self.verbose >= 1:
-            print("Max attempts reached. Skipping this data point.")
+            logger.warning("Max attempts reached. Skipping this data point.")
         return {}
 
     def _calculate_column_stats(self) -> Dict[str, Dict[str, Any]]:
@@ -225,17 +232,18 @@ class SyntheticDataGenerator:
         """Handle the case when a generated data point fails the diversity check."""
         self.diversity_failure_count += 1
         if self.verbose >= 1:
-            print(f"Generated data is not diverse. Retrying... (Failure count: {self.diversity_failure_count})")
+            logger.warning(
+                f"Generated data is not diverse. Retrying... (Failure count: {self.diversity_failure_count})")
         if self.diversity_failure_count >= self.max_diversity_failures:
             if self.verbose >= 1:
-                print("Max diversity failures reached. Forcing acceptance of this data point.")
+                logger.info("Max diversity failures reached. Forcing acceptance of this data point.")
             self.generated_data.append(generated)
             self.diversity_failure_count = 0
         elif self.diversity_failure_count % 5 == 0:
             # Every 5 failures, slightly increase the diversity threshold
             self.diversity_threshold += 0.05
             if self.verbose >= 1:
-                print(f"Increased diversity threshold to {self.diversity_threshold}")
+                logger.info(f"Increased diversity threshold to {self.diversity_threshold}")
 
     def _judge_data_point(self, data: Dict[str, Any]) -> float:
         """Judge the quality of a generated data point."""
@@ -250,7 +258,7 @@ class SyntheticDataGenerator:
             return float(score_str)
         except ValueError:
             if self.verbose >= 1:
-                print(f"Failed to parse judge score: {score_str}")
+                logger.error(f"Failed to parse judge score: {score_str}")
             return 0.5
 
     def _inform_generator(self, data: Dict[str, Any], score: float, reason: str):
@@ -258,7 +266,7 @@ class SyntheticDataGenerator:
         feedback = f"Generated data: {json.dumps(data)}\nScore: {score}\nReason: {reason}"
         self.feedback_history.append(feedback)
         if self.verbose >= 1:
-            print(f"Feedback for generator: {feedback}")
+            logger.info(f"Feedback for generator: {feedback}")
 
     def _convert_to_dataframe(self) -> pd.DataFrame:
         """Convert generated data to a pandas DataFrame."""

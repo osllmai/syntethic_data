@@ -55,27 +55,18 @@ The `DataFromPrompt` class can be used to either generate new data from a user-p
 ### Example 1: Generate data from scratch
 ```python
 from indoxGen.synthCore import DataFromPrompt
-from indoxGen.synthCore import DataGenerationPrompt
 
-user_prompt = "Generate a dataset with 3 columns and 3 rows about astronomy."
+user_prompt = "Generate a dataset with 3 column and 3 row about soccer."
+
 LLM = IndoxApi(api_key=INDOX_API_KEY)
+# instruction = DataGenerationPrompt.get_instruction(user_prompt)
 
-instruction = DataGenerationPrompt.get_instruction(user_prompt)
+data_generator = DataFromPrompt(llm=LLM,user_instruction=user_prompt,verbose=1)
 
-data_generator = DataFromPrompt(
-    prompt_name="Generate Astronomy Data",
-    args={
-        "llm": LLM,
-        "n": 1,
-        "instruction": instruction,
-    },
-    outputs={"generations": "generate"},
-)
+generated_df = data_generator.generate_data()
 
-generated_df = data_generator.run()
-print(generated_df)
-
-data_generator.save_to_excel("output_data.xlsx")
+# print(generated_df)
+data_generator.save_to_excel("output_dataFromPrompt.xlsx")
 ```
 
 ### Example 2: Generate data using an existing dataset
