@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import pandas as pd
 
+
 class DataTransformer:
     """
     DataTransformer class for handling transformations and inverse transformations
@@ -141,5 +142,3 @@ class DataTransformer:
 
         # Return a DataFrame with properly transformed data
         return pd.DataFrame(inverted_data)
-
-

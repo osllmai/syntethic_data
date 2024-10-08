@@ -21,13 +21,15 @@ class TabularGAN(keras.Model):
         self.generator = Generator(config)
         self.discriminator = Discriminator(config)
 
-    def compile(self, g_optimizer, d_optimizer):
+    def compile(self, g_optimizer, d_optimizer, g_lr_scheduler=None, d_lr_scheduler=None):
         """
-        Sets the optimizers for both the generator and discriminator. No need for `super().compile()`.
+        Sets the optimizers and learning rate schedulers for both the generator and discriminator.
         """
+        super(TabularGAN, self).compile()
         self.g_optimizer = g_optimizer
         self.d_optimizer = d_optimizer
-
+        self.g_lr_scheduler = g_lr_scheduler
+        self.d_lr_scheduler = d_lr_scheduler
     def gradient_penalty(self, real_data, fake_data):
         """
         Computes the gradient penalty for the WGAN-GP, enforcing Lipschitz constraint.
@@ -44,7 +46,7 @@ class TabularGAN(keras.Model):
     @tf.function
     def train_step(self, real_data):
         batch_size = tf.shape(real_data)[0]
-        noise = tf.random.normal([batch_size, self.config.input_dim])
+        noise = tf.random.normal([batch_size, self.config.input_dim])  # Can experiment with uniform noise
 
         # Train discriminator
         for _ in range(self.config.n_critic):
@@ -60,6 +62,9 @@ class TabularGAN(keras.Model):
             d_gradients = tape.gradient(d_loss, self.discriminator.trainable_variables)
             self.d_optimizer.apply_gradients(zip(d_gradients, self.discriminator.trainable_variables))
 
+            if self.d_lr_scheduler:
+                self.d_lr_scheduler.on_batch_end(batch=batch_size, logs={"loss": d_loss})
+
         # Train generator
         with tf.GradientTape() as tape:
             fake_data = self.generator(noise, training=True)
@@ -68,6 +73,9 @@ class TabularGAN(keras.Model):
 
         g_gradients = tape.gradient(g_loss, self.generator.trainable_variables)
         self.g_optimizer.apply_gradients(zip(g_gradients, self.generator.trainable_variables))
+
+        if self.g_lr_scheduler:
+            self.g_lr_scheduler.on_batch_end(batch=batch_size, logs={"loss": g_loss})
 
         return {"d_loss": d_loss, "g_loss": g_loss}
 

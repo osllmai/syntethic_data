@@ -1,10 +1,10 @@
 from tensorflow import keras
 import tensorflow as tf
-
 from indoxGen.synthCore.GAN.config import TabularGANConfig
 
 
 class Classifier(keras.Model):
+
     """
     Classifier class for the GAN model, designed to classify generated tabular data into multiple classes.
 
