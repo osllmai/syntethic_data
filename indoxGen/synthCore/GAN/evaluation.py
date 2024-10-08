@@ -23,7 +23,7 @@ def train_and_evaluate_classifier(x_train, y_train, x_test, y_test, classifier_n
     y_test : np.ndarray
         Test labels.
     classifier_name : str
-        The name of the classifier model to be used. Options: ['lr', 'svm', 'dt', 'rf', 'mlp'].
+        The name of the classifier model to be used. Options: ['LogisticRegression', 'SupportVectorMachine', 'DecisionTree', 'RandomForest', 'MultiLayerPerceptron'].
 
     Returns:
     --------
@@ -34,25 +34,25 @@ def train_and_evaluate_classifier(x_train, y_train, x_test, y_test, classifier_n
     from sklearn import svm, tree
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.neural_network import MLPClassifier
-
+    
     # Define model based on input
-    if classifier_name == 'lr':
+    if classifier_name == 'LogisticRegression':
         model = LogisticRegression(random_state=42, max_iter=500)
-    elif classifier_name == 'svm':
+    elif classifier_name == 'SupportVectorMachine':
         model = svm.SVC(random_state=42, probability=True)
-    elif classifier_name == 'dt':
+    elif classifier_name == 'DecisionTree':
         model = tree.DecisionTreeClassifier(random_state=42)
-    elif classifier_name == 'rf':
+    elif classifier_name == 'RandomForest':
         model = RandomForestClassifier(random_state=42)
-    elif classifier_name == 'mlp':
+    elif classifier_name == 'MultiLayerPerceptron':
         model = MLPClassifier(random_state=42, max_iter=100)
-
+    
     # Train the model
     model.fit(x_train, y_train)
-
+    
     # Make predictions
     pred = model.predict(x_test)
-
+    
     # Evaluation for multiclass
     if len(np.unique(y_train)) > 2:
         predict = model.predict_proba(x_test)
