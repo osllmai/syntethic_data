@@ -1,16 +1,10 @@
-from typing import List
-
 from tensorflow import keras
 import pandas as pd
 import numpy as np
-
-from indoxGen.synthCore.GAN.config import TabularGANConfig
 from indoxGen.synthCore.GAN.data_transformer import DataTransformer
 from indoxGen.synthCore.GAN.tabular_gan import TabularGAN
 from indoxGen.synthCore.GAN.utils import GANMonitor
-
 from indoxGen.synthCore.GAN.config import TabularGANConfig
-
 
 
 class TabularGANTrainer:
@@ -63,52 +57,47 @@ class TabularGANTrainer:
             integer_columns=self.integer_columns
         )
         self.transformer.fit(data)
-        return self.transformer.transform(data)
+        transformed_data = self.transformer.transform(data)
+
+        # Update the output_dim in the config based on the transformed data
+        self.config.output_dim = transformed_data.shape[1]
+
+        return transformed_data
 
     def compile_gan(self):
-        """
-        Initializes and compiles the Tabular GAN model with Adam optimizers.
-        """
         self.gan = TabularGAN(self.config)
 
-        # Optimizer setup
-        g_optimizer = keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.5, beta_2=0.9)
-        d_optimizer = keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.5, beta_2=0.9)
+        # Optimizer with gradient clipping
+        g_optimizer = keras.optimizers.Adam(learning_rate=self.config.learning_rate,
+                                            beta_1=self.config.beta_1,
+                                            beta_2=self.config.beta_2,
+                                            clipvalue=1.0)
+        d_optimizer = keras.optimizers.Adam(learning_rate=self.config.learning_rate,
+                                            beta_1=self.config.beta_1,
+                                            beta_2=self.config.beta_2,
+                                            clipvalue=1.0)
+
+        # Compile the GAN
         self.gan.compile(g_optimizer=g_optimizer, d_optimizer=d_optimizer)
 
-        super(TabularGAN, self.gan).compile(
-            loss=None, metrics=None, optimizer=g_optimizer
-        )
-
-    def train(self, data: pd.DataFrame, patience: int = 10):
-        """
-        Trains the Tabular GAN on the provided data with early stopping.
-
-        Parameters:
-        -----------
-        data : pd.DataFrame
-            The raw tabular data to be processed and used for training.
-        patience : int, optional
-            Number of epochs with no improvement after which training will be stopped.
-
-        Returns:
-        --------
-        keras.callbacks.History:
-            The history object storing training progress.
-        """
+    def train(self, data: pd.DataFrame, patience: int = 10, verbose: int = 1):
         transformed_data = self.prepare_data(data)
         self.compile_gan()
 
-        # Custom GAN monitor for early stopping
+        if not self.gan:
+            raise ValueError("GAN model is not initialized or compiled correctly.")
+
         gan_monitor = GANMonitor(patience=patience)
 
-        # Train the GAN with early stopping
+        # Add learning rate scheduler
+        lr_scheduler = keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-6, verbose=1)
+
         self.history = self.gan.fit(
             transformed_data,
             epochs=self.config.epochs,
             batch_size=self.config.batch_size,
-            callbacks=[gan_monitor],
-            verbose=1
+            callbacks=[gan_monitor, lr_scheduler],
+            verbose=verbose
         )
 
         return self.history
@@ -143,23 +132,3 @@ class TabularGANTrainer:
             The history object containing training logs.
         """
         return self.history
-
-    # def evaluate_synthetic_data(self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame):
-    #     # Save real and synthetic data
-    #     real_data.to_csv("real_data.csv", index=False)
-    #     synthetic_data.to_csv("synthetic_data.csv", index=False)
-    #
-    #     # Get utility metrics
-    #     utility_metrics = get_utility_metrics(real_data, synthetic_data)
-    #
-    #     print("Utility Metrics:\n", utility_metrics)
-    #
-    #     # For statistical similarity and privacy metrics, call similar functions as needed
-    #     # Example:
-    #     stat_res = stat_sim("real_data.csv", "synthetic_data.csv", categorical_columns)
-    #     print("Statistical Similarity Metrics:\n", stat_res)
-    #
-    #     privacy_res = privacy_metrics("real_data.csv", "synthetic_data.csv")
-    #     print("Privacy Metrics:\n", privacy_res)
-    #
-    #     return utility_metrics, stat_res, privacy_res
