@@ -1,11 +1,7 @@
-
-# IndoxGen: Enterprise-Grade Synthetic Data Generation Framework
-
+# IndoxGen: Comprehensive Synthetic Data Generation Framework
 
 [![License](https://img.shields.io/github/license/osllmai/indoxGen)](https://github.com/osllmai/indoxGen/blob/main/LICENSE)
-[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.3/)
-[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.3/)
-[![Downloads](https://static.pepy.tech/badge/indoxGen)](https://pepy.tech/project/indoxGen)
+[![Python](https://img.shields.io/pypi/pyversions/indoxGen.svg)](https://pypi.org/project/indoxGen/)
 
 [![Discord](https://img.shields.io/discord/1223867382460579961?label=Discord&logo=Discord&style=social)](https://discord.com/invite/ossllmai)
 [![GitHub stars](https://img.shields.io/github/stars/osllmai/indoxGen?style=social)](https://github.com/osllmai/indoxGen)
@@ -18,39 +14,63 @@
   <b>NEW:</b> <a href="https://docs.google.com/forms/d/1CQXJvxLUqLBSXnjqQmRpOyZqD6nrKubLz2WTcIJ37fU/prefill">Subscribe to our mailing list</a> for updates and news!
 </p>
 
-
 ## Overview
 
-IndoxGen is a state-of-the-art, enterprise-ready framework designed for generating high-fidelity synthetic data. Leveraging advanced AI technologies, including Large Language Models (LLMs) and incorporating human feedback loops, IndoxGen offers unparalleled flexibility and precision in synthetic data creation across various domains and use cases.
+IndoxGen is a state-of-the-art, enterprise-ready framework designed for generating high-fidelity synthetic data. It consists of two main components:
 
-## Key Features
+1. **IndoxGen Core**: Leverages advanced AI technologies, including Large Language Models (LLMs) and human feedback loops, for flexible and precise synthetic data creation.
+2. **IndoxGen-Tensor**: Utilizes Generative Adversarial Networks (GANs) powered by TensorFlow for generating complex tabular data.
 
-- **Multiple Generation Pipelines**:
-  - `SyntheticDataGenerator`: Standard LLM-powered generation pipeline for structured data with embedded quality control mechanisms.
-  - `SyntheticDataGeneratorHF`: Advanced pipeline integrating human feedback to improve generation.
-  - `DataFromPrompt`: Dynamic data generation based on natural language prompts, useful for rapid prototyping.
-  
-- **Customization & Control**: Fine-grained control over data attributes, structure, and diversity. Customize every aspect of the synthetic data generation process.
-  
-- **Human-in-the-Loop**: Seamlessly integrates expert feedback for continuous improvement of generated data, offering the highest quality assurance.
-  
-- **AI-Driven Diversity**: Algorithms ensure representative and varied datasets, providing data diversity for robust modeling.
-  
-- **Flexible I/O**: Supports various data sources and export formats (Excel, CSV, etc.) for easy integration into existing workflows.
-  
-- **Advanced Learning Techniques**: Incorporation of few-shot learning for rapid adaptation to new domains with minimal examples.
-  
-- **Scalability**: Designed to handle both small-scale experiments and large-scale data generation tasks with multi-LLM support.
+Together, these components offer a comprehensive solution for synthetic data generation across various domains and use cases.
+
+## Components
+
+### 1. IndoxGen
+
+[![PyPI](https://badge.fury.io/py/indoxGen.svg)](https://pypi.org/project/indoxGen/0.0.3/)
+[![Downloads](https://static.pepy.tech/badge/indoxGen)](https://pepy.tech/project/indoxGen)
+
+Key Features:
+- Multiple generation pipelines (SyntheticDataGenerator, SyntheticDataGeneratorHF, DataFromPrompt)
+- Human-in-the-loop feedback integration
+- AI-driven diversity ensuring representative datasets
+- Flexible I/O supporting various data sources and export formats
+- Advanced learning techniques including few-shot learning
+
+[Learn more about IndoxGen Core](#indoxgen-core)
+
+### 2. IndoxGen-Tensor
+
+[![PyPI](https://badge.fury.io/py/indoxGen-tensor.svg)](https://pypi.org/project/indoxGen-tensor/)
+[![Downloads](https://static.pepy.tech/badge/indoxGen-tensor)](https://pepy.tech/project/indoxGen-tensor)
+
+Key Features:
+- GAN-based generation for high-fidelity synthetic data
+- TensorFlow integration for efficient, GPU-accelerated training
+- Flexible data handling supporting categorical, mixed, and integer columns
+- Customizable GAN architecture
+- Scalable generation for large volumes of synthetic data
+
+[Learn more about IndoxGen-Tensor](#indoxgen-tensor)
 
 ## Installation
 
+To install both components:
+
+```bash
+pip install indoxgen indoxgen-tensor
+```
+
+Or install them separately:
+
 ```bash
 pip install indoxgen
+pip install indoxgen-tensor
 ```
 
 ## Quick Start Guide
 
-### Basic Usage: SyntheticDataGenerator
+### IndoxGen
 
 ```python
 from indoxGen.synthCore import SyntheticDataGenerator
@@ -78,168 +98,68 @@ generator = SyntheticDataGenerator(
 generated_data = generator.generate_data(num_samples=100)
 ```
 
-### Advanced Usage: SyntheticDataGeneratorHF with Human Feedback
+### IndoxGen-Tensor
 
 ```python
-from indoxGen.synthCore import SyntheticDataGeneratorHF
-from indoxGen.llms import OpenAi
+from indoxGen_tensor import TabularGANConfig, TabularGANTrainer
+import pandas as pd
 
-openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4-0613")
-nemotron = OpenAi(api_key=NVIDIA_API_KEY, model="nvidia/nemotron-4-340b-instruct",
-                  base_url="https://integrate.api.nvidia.com/v1")
+data = pd.read_csv("data/Adult.csv")
 
-generator = SyntheticDataGeneratorHF(
-    generator_llm=nemotron,
-    judge_llm=openai,
-    columns=columns,
-    example_data=example_data,
-    user_instruction="Generate diverse, realistic professional profiles with name, age, and occupation.",
-    verbose=1,
-    diversity_threshold=0.4,
-    feedback_range=feedback_range
+categorical_columns = ["workclass", "education", "marital-status", "occupation",
+                       "relationship", "race", "gender", "native-country", "income"]
+mixed_columns = {"capital-gain": "positive", "capital-loss": "positive"}
+integer_columns = ["age", "fnlwgt", "hours-per-week", "capital-gain", "capital-loss"]
+
+config = TabularGANConfig(
+    input_dim=200,
+    generator_layers=[128, 256, 512],
+    discriminator_layers=[512, 256, 128],
+    learning_rate=2e-4,
+    beta_1=0.5,
+    beta_2=0.9,
+    batch_size=128,
+    epochs=50,
+    n_critic=5
 )
 
-# Implement human feedback loop
-generator.user_review_and_regenerate(
-    regenerate_rows=[0],
-    accepted_rows=[],
-    regeneration_feedback='Diversify names and occupations further',
-    min_score=0.7
+trainer = TabularGANTrainer(
+    config=config,
+    categorical_columns=categorical_columns,
+    mixed_columns=mixed_columns,
+    integer_columns=integer_columns
 )
+
+history = trainer.train(data, patience=15)
+synthetic_data = trainer.generate_samples(50000)
 ```
 
-### Prompt-Based Generation: DataFromPrompt
 
-```python
-from indoxGen.synthCore import DataFromPrompt, DataGenerationPrompt
-from indoxGen.llms import OpenAi
+## Use Cases
 
-nemotron = OpenAi(api_key=NVIDIA_API_KEY, model="nvidia/nemotron-4-340b-instruct",
-                  base_url="https://integrate.api.nvidia.com/v1")
-
-
-user_prompt = "Generate a comprehensive dataset with 3 columns and 3 rows about exoplanets."
-instruction = DataGenerationPrompt.get_instruction(user_prompt)
-
-data_generator = DataFromPrompt(
-    prompt_name="Exoplanet Dataset Generation",
-    args={
-        "llm": nemotron,
-        "n": 1,
-        "instruction": instruction,
-    },
-    outputs={"generations": "generate"},
-)
-
-generated_df = data_generator.run()
-data_generator.save_to_excel("exoplanet_data.xlsx")
-```
-
-## Advanced Techniques
-
-### Few-Shot Learning for Specialized Domains
-
-```python
-from indoxGen.synthCore import FewShotPrompt
-from indoxGen.llms import OpenAi
-
-openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
-
-examples = [
-    {
-        "input": "Generate a dataset with 3 columns and 2 rows about quantum computing.",
-        "output": '[{"Qubit Type": "Superconducting", "Coherence Time": "100 μs", "Gate Fidelity": "0.9999"}, {"Qubit Type": "Trapped Ion", "Coherence Time": "10 ms", "Gate Fidelity": "0.99999"}]'
-    },
-    {
-        "input": "Generate a dataset with 3 columns and 2 rows about nanotechnology.",
-        "output": '[{"Material": "Graphene", "Thickness": "1 nm", "Conductivity": "1.0e6 S/m"}, {"Material": "Carbon Nanotube", "Thickness": "1-2 nm", "Conductivity": "1.0e7 S/m"}]'
-    }
-]
-
-user_prompt = "Generate a dataset with 3 columns and 2 rows about advanced AI architectures."
-
-data_generator = FewShotPrompt(
-    prompt_name="Generate AI Architecture Dataset",
-    args={
-        "llm": openai,
-        "n": 1,  
-        "instruction": user_prompt,  
-    },
-    outputs={"generations": "generate"},
-    examples=examples  
-)
-
-generated_df = data_generator.run()
-data_generator.save_to_excel("ai_architectures.xlsx", generated_df)
-```
-
-### Attributed Prompts for Controlled Variation
-
-```python
-from indoxGen.synthCore import DataFromAttributedPrompt
-from indoxGen.llms import OpenAi
-
-openai = OpenAi(api_key=OPENAI_API_KEY, model="gpt-4o-mini")
-
-args = {
-    "instruction": "Generate a {complexity} machine learning algorithm description that is {application_area} focused.",
-    "attributes": {
-        "complexity": ["basic", "advanced", "cutting-edge"],
-        "application_area": ["computer vision", "natural language processing", "reinforcement learning"]
-    },
-    "llm": openai
-}
-
-dataset = DataFromAttributedPrompt(
-    prompt_name="ML Algorithm Generator",
-    args=args,
-    outputs={}
-)
-
-df = dataset.run()
-print(df)
-```
-
-## Configuration and Customization
-
-Each generator class in IndoxGen is highly configurable to meet specific data generation requirements. Key parameters include:
-
-- `generator_llm` and `judge_llm`: Specify the LLMs used for generation and quality assessment
-- `columns` and `example_data`: Define the structure and provide examples for the generated data
-- `user_instruction`: Customize the generation process with specific guidelines
-- `diversity_threshold`: Control the level of variation in the generated data
-- `verbose`: Adjust the level of feedback during the generation process
-
-Refer to the API documentation for a comprehensive list of configuration options for each class.
-
-## Best Practices
-
-1. **Data Quality Assurance**: Regularly validate generated data against predefined quality metrics.
-2. **Iterative Refinement**: Utilize the human feedback loop to continuously improve generation quality.
-3. **Domain Expertise Integration**: Collaborate with domain experts to fine-tune generation parameters and validate outputs.
-4. **Ethical Considerations**: Ensure generated data adheres to privacy standards and ethical guidelines.
-5. **Performance Optimization**: Monitor and optimize generation pipeline for large-scale tasks.
+- Data Augmentation for Machine Learning
+- Privacy-Preserving Data Sharing
+- Software Testing and Quality Assurance
+- Scenario Planning and Simulation
+- Balancing Imbalanced Datasets
 
 ## Roadmap
-* [x] Implement basic synthetic data generation
-* [x] Add LLM-based judge for quality control
-* [x] Improve diversity checking mechanism
-* [x] Integrate human feedback loop for continuous improvement
-* [ ] Develop a web-based UI for easier interaction
-* [ ] Support for more data types (images, time series, etc.)
-* [ ] Implement differential privacy techniques
-* [ ] Create plugin system for custom data generation rules
-* [ ] Develop comprehensive documentation and tutorials
+
+- [x] Integrate IndoxGen and IndoxGen-Tensor for seamless workflow
+- [ ] Develop a unified web-based UI for both components
+- [ ] Implement advanced privacy-preserving techniques across both modules
+- [ ] Extend support to more data types (images, time series, etc.)
+- [ ] Create a plugin system for custom data generation rules
+- [ ] Develop comprehensive documentation and tutorials covering both components
 
 ## Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
+We welcome contributions to both IndoxGen Core and IndoxGen-Tensor! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to get started.
 
 ## License
 
-IndoxGen is released under the MIT License. See [LICENSE.md](LICENSE.md) for more details.
-
+Both IndoxGen Core and IndoxGen-Tensor are released under the MIT License. See [LICENSE.md](LICENSE.md) for more details.
 
 ---
 
-IndoxGen - Empowering Data-Driven Innovation with Advanced Synthetic Data Generation
+IndoxGen - Empowering Data-Driven Innovation with Comprehensive Synthetic Data Generation
