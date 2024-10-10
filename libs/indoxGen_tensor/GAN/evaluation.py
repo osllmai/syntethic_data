@@ -6,6 +6,9 @@ from sklearn import metrics
 from dython.nominal import associations
 from scipy.stats import wasserstein_distance
 from scipy.spatial import distance
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings("ignore")
 
 # Utility functions
 def train_and_evaluate_classifier(x_train, y_train, x_test, y_test, classifier_name):

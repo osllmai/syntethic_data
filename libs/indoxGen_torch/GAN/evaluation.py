@@ -11,9 +11,7 @@ import seaborn as sns
 import torch
 import warnings
 from sklearn.exceptions import ConvergenceWarning
-
-# Suppress only ConvergenceWarning
-warnings.filterwarnings("ignore", category=ConvergenceWarning)
+warnings.filterwarnings("ignore")
 
 # Part 1: Utility Functions
 def train_and_evaluate_classifier(x_train, y_train, x_test, y_test, classifier_name):
