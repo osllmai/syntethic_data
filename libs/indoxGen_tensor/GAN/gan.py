@@ -1,10 +1,10 @@
 from tensorflow import keras
 import pandas as pd
 import numpy as np
-from indoxGen.synthCore.GAN.data_transformer import DataTransformer
-from indoxGen.synthCore.GAN.tabular_gan import TabularGAN
-from indoxGen.synthCore.GAN.utils import GANMonitor
-from indoxGen.synthCore.GAN.config import TabularGANConfig
+from .config import TabularGANConfig
+from .data_transformer import DataTransformer
+from .tabular_gan import TabularGAN
+from .utils import GANMonitor
 
 
 class TabularGANTrainer:
@@ -90,7 +90,7 @@ class TabularGANTrainer:
         gan_monitor = GANMonitor(patience=patience)
 
         # Add learning rate scheduler
-        lr_scheduler = keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.5, patience=5, min_lr=1e-6, verbose=1)
+        lr_scheduler = keras.callbacks.ReduceLROnPlateau(monitor='d_loss', factor=0.5, patience=5, min_lr=1e-6, verbose=1)
 
         self.history = self.gan.fit(
             transformed_data,

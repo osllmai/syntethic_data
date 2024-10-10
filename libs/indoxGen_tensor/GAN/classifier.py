@@ -1,6 +1,6 @@
 from tensorflow import keras
 import tensorflow as tf
-from indoxGen.synthCore.GAN.config import TabularGANConfig
+from libs.indoxGen_tensor.GAN.config import TabularGANConfig
 
 
 class Classifier(keras.Model):

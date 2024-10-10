@@ -1,9 +1,9 @@
 from tensorflow import keras
 import tensorflow as tf
 
-from indoxGen.synthCore.GAN.config import TabularGANConfig
-from indoxGen.synthCore.GAN.discriminator import Discriminator
-from indoxGen.synthCore.GAN.generator import Generator
+from libs.indoxGen_tensor.GAN.config import TabularGANConfig
+from libs.indoxGen_tensor.GAN.discriminator import Discriminator
+from libs.indoxGen_tensor.GAN.generator import Generator
 
 
 class TabularGAN(keras.Model):

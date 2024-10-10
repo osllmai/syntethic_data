@@ -1,5 +1,5 @@
 import tensorflow as tf
-from indoxGen.synthCore.GAN.config import TabularGANConfig
+from libs.indoxGen_tensor.GAN.config import TabularGANConfig
 
 
 class Generator(tf.keras.Model):
@@ -41,7 +41,7 @@ class Generator(tf.keras.Model):
 
         for i, units in enumerate(self.config.generator_layers):
             model.add(tf.keras.layers.Dense(units, kernel_initializer='he_normal'))
-            model.add(tf.keras.layers.LeakyReLU(alpha=0.2))
+            model.add(tf.keras.layers.LeakyReLU(negative_slope=0.2))
             model.add(tf.keras.layers.BatchNormalization())
 
             # Add residual connections for deeper networks
